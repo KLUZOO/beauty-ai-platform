@@ -384,6 +384,7 @@ class FavoriteMasterSerializer(serializers.ModelSerializer):
         max_digits=3,
         decimal_places=2,
         read_only=True,
+        allow_null=True,
     )
     salons = SalonShortSerializer(
         many=True,

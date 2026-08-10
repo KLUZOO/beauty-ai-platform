@@ -311,9 +311,6 @@ class FavoriteMasterView(APIView):
                 rating=Avg(
                     "appointments__review__rating",
                 ),
-                favorite_created_at=F(
-                    "favorite_relations__created_at",
-                ),
             )
             .select_related("user")
             .prefetch_related(
@@ -322,7 +319,12 @@ class FavoriteMasterView(APIView):
                     queryset=Salon.objects.filter(
                         salon_status=SalonStatus.ACTIVE,
                     ),
-                )
+                ),
+                Prefetch(
+                    "services",
+                    queryset=Service.objects.filter(is_active=True),
+                    to_attr="active_services_list",
+                ),
             ),
             id=master_id,
         )
