@@ -1,19 +1,12 @@
-from typing import (
-    Any,
-    ClassVar
-)
+from typing import Any, ClassVar
 
 from appointments.models import Appointment
 from beauty_service.models import Service
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
-
 from django.core.exceptions import ValidationError as DjangoValidationError
-
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
-
 from salons.models import Salon
 
 from users.models import (
@@ -21,9 +14,7 @@ from users.models import (
     Master,
     WorkingSchedule,
 )
-
 from users.services.auth_service import UserRegistrationService
-
 
 User = get_user_model()
 
@@ -377,3 +368,44 @@ class GoogleLoginSerializer(serializers.Serializer):
 class VerifyEmailSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     token = serializers.CharField(required=True)
+
+
+class FavoriteMasterSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(
+        source="user.get_full_name",
+        read_only=True,
+    )
+    profile_photo = serializers.ImageField(
+        source="user.photo",
+        read_only=True,
+    )
+    average_rating = serializers.DecimalField(
+        source="rating",
+        max_digits=3,
+        decimal_places=2,
+        read_only=True,
+    )
+    salons = SalonShortSerializer(
+        many=True,
+        read_only=True,
+    )
+    active_services = ServiceSerializer(
+        source="active_services_list",
+        many=True,
+        read_only=True,
+    )
+    favorite_created_at = serializers.DateTimeField(
+        read_only=True,
+    )
+
+    class Meta:
+        model = Master
+        fields = (
+            "id",
+            "name",
+            "profile_photo",
+            "average_rating",
+            "salons",
+            "active_services",
+            "favorite_created_at",
+        )

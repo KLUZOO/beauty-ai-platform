@@ -1,17 +1,10 @@
 from django.conf import settings
-
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-
 from django.db import models
-from django.db.models import (
-    Avg,
-    QuerySet
-)
-
+from django.db.models import Avg, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
-
 from phonenumber_field.modelfields import PhoneNumberField
 
 from .managers import UserManager
@@ -80,6 +73,11 @@ class User(AbstractUser):
     )
     last_update_user = models.DateTimeField(
         auto_now=True,
+    )
+    favorite_masters = models.ManyToManyField(
+        "Master",
+        related_name="favorited_by",
+        through="FavoriteMaster",
     )
 
     @property
@@ -369,3 +367,30 @@ class MasterService(models.Model):
 
     def __str__(self) -> str:
         return f"{self.master} - {self.service}"
+
+
+class FavoriteMaster(models.Model):
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="favorite_master_relations",
+    )
+
+    master = models.ForeignKey(
+        "Master",
+        on_delete=models.CASCADE,
+        related_name="favorite_relations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=["client", "master"],
+                name="unique_client_favorite_masters",
+            ),
+        )
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.client} → {self.master}"

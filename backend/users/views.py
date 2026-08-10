@@ -1,42 +1,29 @@
-from django.db.models import (
-    Avg,
-    Count,
-    Q,
-    Prefetch,
-    Value
-)
-
+from beauty_service.models import Service
+from django.db.models import Avg, Count, F, Prefetch, Q, Value
 from django.db.models.functions import Concat
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.views import View
-
-from rest_framework import (
-    generics,
-    status,
-    viewsets
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    inline_serializer,
 )
+from rest_framework import generics, serializers, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
-from rest_framework.permissions import (
-    AllowAny,
-    IsAuthenticated
-)
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from salons.models import Salon, SalonStatus
 
-from users.models import (
-    DayOff,
-    Master,
-    MasterStatus,
-    WorkingSchedule
-)
-
+from users.models import DayOff, FavoriteMaster, Master, MasterStatus, WorkingSchedule
 from users.permissions import IsMaster
 from users.serializers import (
     ChangePasswordSerializer,
     DayOffSerializer,
+    FavoriteMasterSerializer,
     GoogleLoginSerializer,
     MasterListSerializer,
     MasterProfileSerializer,
@@ -231,3 +218,214 @@ class GoogleLoginView(APIView):
 class GoogleTestView(View):
     def get(self, request):
         return render(request, "test-google/test-google.html")
+
+
+class FavoriteMastersListView(generics.ListAPIView):
+    serializer_class = FavoriteMasterSerializer
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Get favorite masters",
+        description=(
+            "Returns the authenticated client's list of favorite masters. "
+            "Only active masters are included."
+        ),
+        responses={
+            200: FavoriteMasterSerializer(many=True),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided "
+                "or are invalid.",
+            ),
+        },
+        tags=["Favorite Masters"],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return (
+            Master.objects.filter(
+                favorite_relations__client=self.request.user,
+                account_status=MasterStatus.ACTIVE,
+            )
+            .annotate(
+                rating=Avg(
+                    "appointments__review__rating",
+                ),
+                favorite_created_at=F(
+                    "favorite_relations__created_at",
+                ),
+            )
+            .select_related("user")
+            .prefetch_related(
+                "salons",
+                Prefetch(
+                    "services",
+                    queryset=Service.objects.filter(is_active=True),
+                    to_attr="active_services_list",
+                ),
+            )
+            .distinct()
+        )
+
+
+class FavoriteMasterView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Add master to favorites",
+        description=(
+            "Adds an active master to the authenticated client's "
+            "favorite masters list. A master can only be added once."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="master_id",
+                type=int,
+                location=OpenApiParameter.PATH,
+                description="ID of the master to add to favorites.",
+                required=True,
+            ),
+        ],
+        responses={
+            201: FavoriteMasterSerializer,
+            400: OpenApiResponse(
+                description="The master is already in favorites.",
+            ),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided "
+                "or are invalid.",
+            ),
+            404: OpenApiResponse(
+                description="Master not found or master is not active.",
+            ),
+        },
+        tags=["Favorite Masters"],
+    )
+    def post(self, request, master_id):
+        master = get_object_or_404(
+            Master.objects.filter(
+                account_status=MasterStatus.ACTIVE,
+            )
+            .annotate(
+                rating=Avg(
+                    "appointments__review__rating",
+                ),
+                favorite_created_at=F(
+                    "favorite_relations__created_at",
+                ),
+            )
+            .select_related("user")
+            .prefetch_related(
+                Prefetch(
+                    "salons",
+                    queryset=Salon.objects.filter(
+                        salon_status=SalonStatus.ACTIVE,
+                    ),
+                )
+            ),
+            id=master_id,
+        )
+
+        favorite, created = FavoriteMaster.objects.get_or_create(
+            client=request.user,
+            master=master,
+        )
+
+        if not created:
+            return Response(
+                {"detail": "Master is already in favorites."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        master.favorite_created_at = favorite.created_at
+
+        serializer = FavoriteMasterSerializer(master)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="Remove master from favorites",
+        description=(
+            "Removes the specified master from the authenticated client's "
+            "favorite masters list. This does not affect appointment history."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="master_id",
+                type=int,
+                location=OpenApiParameter.PATH,
+                description="ID of the master to remove from favorites.",
+                required=True,
+            ),
+        ],
+        responses={
+            204: OpenApiResponse(
+                description="Master successfully removed from favorites.",
+            ),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided "
+                "or are invalid.",
+            ),
+            404: OpenApiResponse(
+                description="The master is not in the authenticated client's "
+                "favorites.",
+            ),
+        },
+        tags=["Favorite Masters"],
+    )
+    def delete(self, request, master_id):
+        favorite = get_object_or_404(
+            FavoriteMaster,
+            client=request.user,
+            master_id=master_id,
+        )
+
+        favorite.delete()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+    @extend_schema(
+        summary="Check if master is in favorites",
+        description=(
+            "Returns whether the specified master is in the "
+            "authenticated client's favorites."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="master_id",
+                type=int,
+                location=OpenApiParameter.PATH,
+                description="ID of the master.",
+                required=True,
+            ),
+        ],
+        responses={
+            200: inline_serializer(
+                name="FavoriteMasterStatus",
+                fields={
+                    "is_favorite": serializers.BooleanField(),
+                },
+            ),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided "
+                "or are invalid.",
+            ),
+        },
+        tags=["Favorite Masters"],
+    )
+    def get(self, request, master_id):
+        is_favorite = FavoriteMaster.objects.filter(
+            client=request.user,
+            master_id=master_id,
+        ).exists()
+
+        return Response(
+            {"is_favorite": is_favorite},
+            status=status.HTTP_200_OK,
+        )
