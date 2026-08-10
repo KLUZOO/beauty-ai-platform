@@ -1,9 +1,12 @@
 from typing import Any
 
-from django.db.models import (
-    Avg,
-    Count,
-    Q, QuerySet
+from django.db.models import Avg, Count, Q, QuerySet
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
 )
 from rest_framework import generics
 from rest_framework.filters import OrderingFilter
@@ -11,12 +14,31 @@ from users.models import MasterStatus
 
 from .models import Salon, SalonStatus
 from .permissions import IsAdminOrReadOnlyAll
-from .serializers import (
-    SalonListSerializer,
-    SalonSerializer
+from .serializers import SalonListSerializer, SalonSerializer
+
+
+@extend_schema_view(
+    get=extend_schema(
+        summary="List all basic salons",
+        description="Retrieve a list of all raw salon entities. Accessible to unauthenticated users.",
+        responses={200: SalonSerializer(many=True)},
+    ),
+    post=extend_schema(
+        summary="Create a new salon",
+        description="Create a new salon entry. Restricted to staff/admin users.",
+        request=SalonSerializer,
+        responses={
+            201: SalonSerializer,
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            403: OpenApiResponse(
+                description="Permission denied (Requires staff access)"
+            ),
+        },
+    ),
 )
-
-
 class SalonListCreateView(generics.ListCreateAPIView):
     """
     GET /api/salons/ — list of all salons, accessible to anyone (even without authorization)
@@ -30,7 +52,56 @@ class SalonListCreateView(generics.ListCreateAPIView):
     serializer_class = SalonSerializer
     permission_classes = [IsAdminOrReadOnlyAll]
 
-
+@extend_schema_view(
+    get=extend_schema(
+        summary="Retrieve a salon",
+        description="Get detailed raw information about a specific salon by ID.",
+        responses={
+            200: SalonSerializer,
+            404: OpenApiResponse(description="Salon not found"),
+        },
+    ),
+    put=extend_schema(
+        summary="Update a salon (full)",
+        description="Update all fields of an existing salon. Restricted to staff users.",
+        request=SalonSerializer,
+        responses={
+            200: SalonSerializer,
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Salon not found"),
+        },
+    ),
+    patch=extend_schema(
+        summary="Update a salon (partial)",
+        description="Partially update specific fields of a salon. Restricted to staff users.",
+        request=SalonSerializer,
+        responses={
+            200: SalonSerializer,
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Salon not found"),
+        },
+    ),
+    delete=extend_schema(
+        summary="Delete a salon",
+        description="Permanently remove a salon record. Restricted to staff users.",
+        responses={
+            204: OpenApiResponse(description="Salon successfully deleted"),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Salon not found"),
+        },
+    ),
+)
 class SalonDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     GET /api/salons/<id>/ — details of one salon, accessible to anyone
@@ -85,7 +156,38 @@ class SalonOrderingFilter(OrderingFilter):
 
         return result
 
-
+@extend_schema(
+    summary="List active salons with details and metrics",
+    description=(
+        "Retrieves active salons containing active masters with at least one active service. "
+        "Includes calculated aggregations such as average ratings, review counts, active master count, "
+        "and working schedules."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="ordering",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                "Which field to use when ordering the results. Options: "
+                "`rating`, `reviews`, `popularity`, `name`. "
+                "Prefix with `-` for descending order (e.g., `-rating`). Default is `-rating`."
+            ),
+            enum=[
+                "rating",
+                "-rating",
+                "reviews",
+                "-reviews",
+                "popularity",
+                "-popularity",
+                "name",
+                "-name",
+            ],
+        ),
+    ],
+    responses={200: SalonListSerializer(many=True)},
+)
 class SalonListView(generics.ListAPIView):
     serializer_class = SalonListSerializer
     filter_backends = (SalonOrderingFilter,)

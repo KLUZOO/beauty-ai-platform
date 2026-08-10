@@ -1,44 +1,72 @@
-from datetime import (
-    datetime,
-    timedelta
-)
+from datetime import datetime, timedelta
 
+from beauty_service.models import Service
 from django.db.models import QuerySet
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import (
-    filters,
-    generics,
-    serializers
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
 )
+from rest_framework import filters, generics, serializers
+from rest_framework import status as http_status
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import APIException
-from rest_framework import status as http_status
-
+from salons.models import Salon
+from tasks.notification import send_email_task
 from users.permissions import IsMaster
+
+from .filters import MasterAppointmentFilter, MasterAppointmentHistoryFilter
 from .models import Appointment
 from .serializers import (
     AppointmentSerializer,
-    RescheduleSerializer,
     CancelSerializer,
-    MasterStatusUpdateSerializer,
-    MasterAppointmentListSerializer,
     MasterAppointmentDetailSerializer,
-    MasterAppointmentHistorySerializer
+    MasterAppointmentHistorySerializer,
+    MasterAppointmentListSerializer,
+    MasterStatusUpdateSerializer,
+    RescheduleSerializer,
 )
-from .filters import (
-    MasterAppointmentFilter,
-    MasterAppointmentHistoryFilter
+
+
+@extend_schema(
+    summary="List client appointments",
+    description="Retrieve a list of reservations for the currently authenticated client.",
+    parameters=[
+        OpenApiParameter(
+            name="status",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter appointments by status (e.g. pending, confirmed, completed, cancelled, in_progress, no_show)",
+            enum=[
+                "pending",
+                "confirmed",
+                "in_progress",
+                "completed",
+                "cancelled",
+                "no_show",
+            ],
+        ),
+        OpenApiParameter(
+            name="ordering",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Which field to use when ordering the results. Options: `start`, `created_at`. Prefix with `-` for descending order (e.g. `-start`). Default is `-start`.",
+            enum=["start", "-start", "created_at", "-created_at"],
+        ),
+    ],
+    responses={
+        200: AppointmentSerializer(many=True),
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+    },
 )
-
-from beauty_service.models import Service
-from salons.models import Salon
-
-from tasks.notification import send_email_task
-
-
 class ClientAppointmentListView(generics.ListAPIView):
     """
     GET /api/appointments/my/
@@ -63,6 +91,23 @@ class ClientAppointmentListView(generics.ListAPIView):
         return Appointment.objects.filter(client=self.request.user)
 
 
+@extend_schema(
+    summary="Reschedule client appointment",
+    description="Moves an existing customer reservation to a new datetime interval.",
+    request=RescheduleSerializer,
+    responses={
+        200: RescheduleSerializer,
+        400: OpenApiResponse(
+            description="Validation error (e.g., end time is before start time, or appointment is already completed/cancelled)"
+        ),
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+        404: OpenApiResponse(
+            description="Appointment not found or does not belong to the user"
+        ),
+    },
+)
 class RescheduleAppointmentView(generics.UpdateAPIView):
     """
     PATCH /api/appointments/<id>/reschedule/
@@ -89,6 +134,23 @@ class RescheduleAppointmentView(generics.UpdateAPIView):
         serializer.save(status="pending")
 
 
+@extend_schema(
+    summary="Cancel client appointment",
+    description="Cancels the customer's upcoming booking (sets the status to 'cancelled'). Request body is optional.",
+    request=CancelSerializer,
+    responses={
+        200: CancelSerializer,
+        400: OpenApiResponse(
+            description="Validation error (e.g. appointment is already completed or cancelled)"
+        ),
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+        404: OpenApiResponse(
+            description="Appointment not found or does not belong to the user"
+        ),
+    },
+)
 class CancelAppointmentView(generics.UpdateAPIView):
     """
     PATCH /api/appointments/<id>/cancel/
@@ -116,6 +178,74 @@ class CancelAppointmentView(generics.UpdateAPIView):
         serializer.save(status="cancelled")
 
 
+@extend_schema(
+    summary="Get available booking slots",
+    description=(
+        "Returns a list of available time slots for booking, grouped by date.\n\n"
+        "Required query parameters: `salon`, `master`, `service`, `date_from`."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="salon",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the salon (used to fetch daily working hours)",
+        ),
+        OpenApiParameter(
+            name="master",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the master (used to query busy time ranges)",
+        ),
+        OpenApiParameter(
+            name="service",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the service (used to compute required slot duration)",
+        ),
+        OpenApiParameter(
+            name="date_from",
+            type=OpenApiTypes.DATE,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="Start date for slot lookup (format: YYYY-MM-DD)",
+        ),
+        OpenApiParameter(
+            name="date_to",
+            type=OpenApiTypes.DATE,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="End date for slot lookup (format: YYYY-MM-DD, inclusive; defaults to date_from)",
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=OpenApiTypes.OBJECT,
+            description="Map of dates to array of available time slots",
+            examples=[
+                OpenApiExample(
+                    name="Available slots example",
+                    value={
+                        "2026-08-01": [
+                            {"start": "10:00", "end": "10:45"},
+                            {"start": "10:15", "end": "11:00"},
+                        ],
+                        "2026-08-02": [],
+                    },
+                )
+            ],
+        ),
+        400: OpenApiResponse(
+            description="Validation error (missing required parameters, invalid date format, or invalid IDs)"
+        ),
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+    },
+)
 class AvailableSlotsView(APIView):
     """
     GET /api/appointments/available-slots/?salon=1&master=3&service=5&date_from=2026-08-01&date_to=2026-08-03
@@ -203,10 +333,7 @@ class AvailableSlotsView(APIView):
             )
 
             # Build list of occupied (start_datetime, end_datetime) tuples
-            busy_intervals = [
-                (a.start, a.end)
-                for a in busy_appointments
-            ]
+            busy_intervals = [(a.start, a.end) for a in busy_appointments]
 
             # Construct datetime boundaries for the master's working day
             # noinspection PyUnresolvedReferences
@@ -256,6 +383,36 @@ class StatusTransitionConflict(APIException):
     default_code = "status_transition_conflict"
 
 
+@extend_schema(
+    summary="Update appointment status by master",
+    description=(
+        "Allows an authenticated master to update the status of their assigned appointment.\n\n"
+        "**Allowed status transitions:**\n"
+        "- `pending` ➔ `confirmed`, `cancelled`\n"
+        "- `confirmed` ➔ `in_progress`, `cancelled`\n"
+        "- `in_progress` ➔ `completed`\n"
+        "- `completed` ➔ (none, final status)\n"
+        "- `cancelled` ➔ (none, final status)\n\n"
+        "**Note:** If status is set to `cancelled`, `cancellation_reason` is required."
+    ),
+    request=MasterStatusUpdateSerializer,
+    responses={
+        200: MasterStatusUpdateSerializer,
+        400: OpenApiResponse(
+            description="Validation error (e.g. missing cancellation_reason when status='cancelled')"
+        ),
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+        403: OpenApiResponse(
+            description="Permission denied or appointment not assigned to this master"
+        ),
+        404: OpenApiResponse(description="Appointment not found"),
+        409: OpenApiResponse(
+            description="Status transition conflict (e.g. invalid status transition like completed ➔ in_progress)"
+        ),
+    },
+)
 class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
     """
     PATCH /api/appointments/<id>/status/
@@ -311,18 +468,57 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
             recipient=appointment.client.email,
             subject="Оновлення статусу вашого запису",
             context={
-                "customer_name": appointment.client.get_full_name() or appointment.client.email,
+                "customer_name": appointment.client.get_full_name()
+                or appointment.client.email,
                 "booking_status": appointment.get_status_display(),
                 "salon_name": appointment.salon.name,
-                "master_name": appointment.master.user.get_full_name() or appointment.master.user.email,
+                "master_name": appointment.master.user.get_full_name()
+                or appointment.master.user.email,
                 "service_name": appointment.service.name,
                 "booking_date": appointment.start.date().isoformat(),
                 "booking_time": appointment.start.time().strftime("%H:%M"),
-                "notification_message": "Статус вашого запису оновлено на '%s'." % appointment.get_status_display(),
+                "notification_message": "Статус вашого запису оновлено на '%s'."
+                % appointment.get_status_display(),
             },
         )
 
 
+@extend_schema(
+    summary="List active master appointments",
+    description="Returns active appointments (pending, confirmed, in_progress) assigned to the current master.",
+    parameters=[
+        OpenApiParameter(
+            "appointment_date",
+            OpenApiTypes.DATE,
+            OpenApiParameter.QUERY,
+            description="Filter by date (YYYY-MM-DD)",
+        ),
+        OpenApiParameter(
+            "status",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Filter by status (pending, confirmed, in_progress)",
+        ),
+        OpenApiParameter(
+            "client",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Filter by client email (contains)",
+        ),
+        OpenApiParameter(
+            "service",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Filter by service name (contains)",
+        ),
+        OpenApiParameter(
+            "ordering",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Ordering: start, created_at, status, service__price (prefix with '-' for descending)",
+        ),
+    ],
+)
 class MasterAppointmentListView(generics.ListAPIView):
     """
     GET /api/appointments/master/active/
@@ -360,15 +556,34 @@ class MasterAppointmentListView(generics.ListAPIView):
         ordering_param = self.request.query_params.get("ordering")
         if ordering_param:
             requested_fields = [f.lstrip("-") for f in ordering_param.split(",")]
-            invalid_fields = [f for f in requested_fields if f not in self.ordering_fields]
+            invalid_fields = [
+                f for f in requested_fields if f not in self.ordering_fields
+            ]
             if invalid_fields:
                 raise serializers.ValidationError(
-                    {"ordering": "Недопустимі поля сортування: %s" % ", ".join(invalid_fields)}
+                    {
+                        "ordering": "Недопустимі поля сортування: %s"
+                        % ", ".join(invalid_fields)
+                    }
                 )
 
         return super().filter_queryset(queryset)
 
 
+@extend_schema(
+    summary="Get master appointment detail",
+    description="Retrieve detailed information about a specific appointment assigned to the currently authenticated master.",
+    responses={
+        200: MasterAppointmentDetailSerializer,
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+        403: OpenApiResponse(description="Permission denied (Requires master profile)"),
+        404: OpenApiResponse(
+            description="Appointment not found or not assigned to this master"
+        ),
+    },
+)
 class MasterAppointmentDetailView(generics.RetrieveAPIView):
     """
     GET /api/appointments/master/<id>/
@@ -382,11 +597,53 @@ class MasterAppointmentDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self) -> QuerySet[Appointment]:
         # Ensure masters can only retrieve details of their own appointments
-        return Appointment.objects.filter(master__user=self.request.user).select_related(
-            "client", "service", "salon"
-        )
+        return Appointment.objects.filter(
+            master__user=self.request.user
+        ).select_related("client", "service", "salon")
 
 
+@extend_schema(
+    summary="List master appointment history",
+    description="Returns completed and canceled appointments assigned to the currently authenticated master.",
+    parameters=[
+        OpenApiParameter(
+            "date_from",
+            OpenApiTypes.DATE,
+            OpenApiParameter.QUERY,
+            description="Filter from this date (YYYY-MM-DD)",
+        ),
+        OpenApiParameter(
+            "date_to",
+            OpenApiTypes.DATE,
+            OpenApiParameter.QUERY,
+            description="Filter to this date (YYYY-MM-DD)",
+        ),
+        OpenApiParameter(
+            "status",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Filter by status (completed, cancelled)",
+        ),
+        OpenApiParameter(
+            "client",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Filter by client email (contains)",
+        ),
+        OpenApiParameter(
+            "service",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Filter by service name (contains)",
+        ),
+        OpenApiParameter(
+            "ordering",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Ordering: start, created_at, status, service__price (prefix with '-' for descending)",
+        ),
+    ],
+)
 class MasterAppointmentHistoryView(generics.ListAPIView):
     """
     GET /api/appointments/master/history/
@@ -423,10 +680,15 @@ class MasterAppointmentHistoryView(generics.ListAPIView):
         ordering_param = self.request.query_params.get("ordering")
         if ordering_param:
             requested_fields = [f.lstrip("-") for f in ordering_param.split(",")]
-            invalid_fields = [f for f in requested_fields if f not in self.ordering_fields]
+            invalid_fields = [
+                f for f in requested_fields if f not in self.ordering_fields
+            ]
             if invalid_fields:
                 raise serializers.ValidationError(
-                    {"ordering": "Недопустимі поля сортування: %s" % ", ".join(invalid_fields)}
+                    {
+                        "ordering": "Недопустимі поля сортування: %s"
+                        % ", ".join(invalid_fields)
+                    }
                 )
 
         return super().filter_queryset(queryset)

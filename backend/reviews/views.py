@@ -2,6 +2,13 @@ from appointments.models import Appointment
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import generics, mixins, permissions, serializers
 from rest_framework.filters import OrderingFilter
 from users.permissions import IsMaster
@@ -16,6 +23,24 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="List all reviews",
+        responses={200: ReviewSerializer(many=True)},
+    ),
+    post=extend_schema(
+        summary="Create a review",
+        responses={
+            201: ReviewSerializer,
+            400: OpenApiResponse(
+                description="Validation error (e.g., trying to review someone else's or uncompleted appointment)"
+            ),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+        },
+    ),
+)
 class ReviewListCreateView(generics.ListCreateAPIView):
     """
     GET /api/reviews/ — list of all reviews, available to anyone (even without authorization)
@@ -49,6 +74,13 @@ class ReviewListCreateView(generics.ListCreateAPIView):
         serializer.save(client=self.request.user)
 
 
+@extend_schema(
+    summary="Retrieve a review",
+    responses={
+        200: ReviewSerializer,
+        404: OpenApiResponse(description="Review not found"),
+    },
+)
 class ReviewDetailView(generics.RetrieveAPIView):
     """
     GET /api/reviews/<id>/ — details of one review, available to anyone.
@@ -72,6 +104,43 @@ class MasterReviewQuerysetMixin:
         )
 
 
+@extend_schema(
+    summary="List reviews for current master",
+    description="Retrieve all reviews left for completed appointments of the authenticated master.",
+    parameters=[
+        OpenApiParameter(
+            name="rating",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description="Filter by exact rating (1 to 5)",
+        ),
+        OpenApiParameter(
+            name="service",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter by service name (case-insensitive search)",
+        ),
+        OpenApiParameter(
+            name="date_from",
+            type=OpenApiTypes.DATE,
+            location=OpenApiParameter.QUERY,
+            description="Filter reviews created from this date (YYYY-MM-DD)",
+        ),
+        OpenApiParameter(
+            name="date_to",
+            type=OpenApiTypes.DATE,
+            location=OpenApiParameter.QUERY,
+            description="Filter reviews created up to this date (YYYY-MM-DD)",
+        ),
+    ],
+    responses={
+        200: MasterReviewSerializer(many=True),
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+        403: OpenApiResponse(description="Permission denied (Requires master profile)"),
+    },
+)
 class MasterReviewListView(MasterReviewQuerysetMixin, generics.ListAPIView):
     serializer_class = MasterReviewSerializer
     permission_classes = (IsMaster,)
@@ -87,11 +156,70 @@ class MasterReviewListView(MasterReviewQuerysetMixin, generics.ListAPIView):
     ordering = ("-created_at",)
 
 
+@extend_schema(
+    summary="Retrieve a specific review for current master",
+    responses={
+        200: MasterReviewSerializer,
+        401: OpenApiResponse(
+            description="Authentication credentials were not provided"
+        ),
+        403: OpenApiResponse(description="Permission denied"),
+        404: OpenApiResponse(
+            description="Review not found or does not belong to this master"
+        ),
+    },
+)
 class MasterReviewDetailView(MasterReviewQuerysetMixin, generics.RetrieveAPIView):
     serializer_class = MasterReviewSerializer
     permission_classes = (IsMaster,)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="Get review for specific appointment",
+        responses={
+            200: AppointmentReviewSerializer,
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            404: OpenApiResponse(description="Review not found"),
+        },
+    ),
+    post=extend_schema(
+        summary="Create review for specific appointment",
+        responses={
+            201: AppointmentReviewSerializer,
+            400: OpenApiResponse(
+                description="Validation error (e.g., review already exists, appointment is not completed, or not owned by user)"
+            ),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            404: OpenApiResponse(description="Appointment not found"),
+        },
+    ),
+    patch=extend_schema(
+        summary="Update review for specific appointment",
+        responses={
+            200: AppointmentReviewSerializer,
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            404: OpenApiResponse(description="Review not found"),
+        },
+    ),
+    delete=extend_schema(
+        summary="Delete review for specific appointment",
+        responses={
+            204: OpenApiResponse(description="Review successfully deleted"),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided"
+            ),
+            404: OpenApiResponse(description="Review not found"),
+        },
+    ),
+)
 class AppointmentReviewView(
     mixins.RetrieveModelMixin,
     mixins.CreateModelMixin,
