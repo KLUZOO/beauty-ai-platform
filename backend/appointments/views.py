@@ -20,7 +20,10 @@ from rest_framework import (
     serializers
 )
 from rest_framework import status as http_status
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import (
+    APIException,
+    PermissionDenied
+)
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticated
@@ -176,34 +179,89 @@ class CancelAppointmentView(generics.UpdateAPIView):
     """
     PATCH /api/appointments/<id>/cancel/
 
-    Cancels the customer's upcoming booking (sets the status to "canceled").
-    The request body is optional.
+    Cancel an appointment (BE-BOOKING-04).
+    Allowed for:
+    - Client (own appointments)
+    - Master (assigned appointments)
+    - Administrator (any appointments)
     """
-
     serializer_class = CancelSerializer
     permission_classes = [IsAuthenticated]
     http_method_names = ["patch"]
+    queryset = Appointment.objects.all()
 
-    def get_queryset(self) -> QuerySet[Appointment]:
-        # Restrict cancellation strictly to the user's own appointments
-        return Appointment.objects.filter(client=self.request.user)
+    def get_object(self) -> Appointment:
+        appointment = super().get_object()
+        user = self.request.user
+
+        # 1. Checking roles and access rights
+        is_admin = user.is_staff or user.is_superuser
+        is_client = appointment.client == user
+        is_master = hasattr(appointment.master, "user") and appointment.master.user == user
+
+        if not (is_admin or is_client or is_master):
+            raise PermissionDenied("У вас немає прав для скасування цього запису.")
+
+        return appointment
 
     def perform_update(self, serializer) -> None:
-        # Prevent cancellation for past or already canceled appointments
         appointment = self.get_object()
-        if appointment.status in ["cancelled", "completed"]:
-            raise serializers.ValidationError(
-                "Бронювання зі статусом '%s' вже неможливо скасувати."
-                % appointment.status
+
+        # Check the status of the recording
+        if appointment.status == "cancelled":
+            raise serializers.ValidationError({"detail": "Запис вже скасовано."})
+
+        if appointment.status == "completed":
+            raise serializers.ValidationError({"detail": "Неможливо скасувати вже завершений запис."})
+
+        # Check the time (only future recordings)
+        if appointment.start <= timezone.now():
+            raise serializers.ValidationError({"detail": "Неможливо скасувати минулий запис."})
+
+        # Save the reason for cancellation and change the status
+        reason = serializer.validated_data.get("cancellation_reason", "")
+        if hasattr(appointment, "cancellation_reason"):
+            appointment.cancellation_reason = reason
+        elif reason and hasattr(appointment, "notes"):
+            appointment.notes = f"{appointment.notes}\nПричина скасування: {reason}".strip()
+
+        appointment.status = "cancelled"
+        appointment.save()
+
+        # 5. Відправка email-сповіщень (Клієнту та Майстру)
+        if appointment.client and appointment.client.email:
+            send_email_task.delay(
+                recipient=appointment.client.email,
+                subject="Скасування бронювання",
+                context={
+                    "customer_name": appointment.client.get_full_name() or appointment.client.email,
+                    "service_name": appointment.service.name,
+                    "booking_date": appointment.start.strftime("%Y-%m-%d"),
+                    "booking_time": appointment.start.strftime("%H:%M"),
+                    "reason": reason or "Не вказано",
+                }
             )
-        serializer.save(status="cancelled")
+
+        if appointment.master and appointment.master.user and appointment.master.user.email:
+            send_email_task.delay(
+                recipient=appointment.master.user.email,
+                subject="Скасування бронювання клієнтом",
+                context={
+                    "master_name": appointment.master.user.get_full_name() or appointment.master.user.email,
+                    "customer_name": appointment.client.get_full_name() or appointment.client.email,
+                    "service_name": appointment.service.name,
+                    "booking_date": appointment.start.strftime("%Y-%m-%d"),
+                    "booking_time": appointment.start.strftime("%H:%M"),
+                    "reason": reason or "Не вказано",
+                }
+            )
 
 
 @extend_schema(
     summary="Get available booking slots",
     description=(
-        "Returns a list of available time slots for booking, grouped by date.\n\n"
-        "Required query parameters: `salon`, `master`, `service`, `date_from`."
+            "Returns a list of available time slots for booking, grouped by date.\n\n"
+            "Required query parameters: `salon`, `master`, `service`, `date_from`."
     ),
     parameters=[
         OpenApiParameter(

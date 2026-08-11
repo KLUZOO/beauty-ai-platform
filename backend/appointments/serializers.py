@@ -52,9 +52,15 @@ class RescheduleSerializer(serializers.ModelSerializer):
 
 
 class CancelSerializer(serializers.ModelSerializer):
+    cancellation_reason = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        write_only=True
+    )
+
     class Meta:
         model = Appointment
-        fields = []
+        fields = ["cancellation_reason"]
 
 
 class MasterStatusUpdateSerializer(serializers.ModelSerializer):
