@@ -13,6 +13,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "id",
             "appointment",
             "client",
+            "master",
             "rating",
             "comment",
             "created_at",
