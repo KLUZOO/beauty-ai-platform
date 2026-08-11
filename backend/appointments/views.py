@@ -16,7 +16,6 @@ from drf_spectacular.utils import (
 )
 from rest_framework import (
     filters,
-    generics,
     serializers
 )
 from rest_framework import status as http_status
@@ -30,7 +29,10 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import generics, permissions
+from rest_framework import (
+    generics,
+    permissions
+)
 
 from salons.models import Salon
 
@@ -46,7 +48,7 @@ from appointments.services.availability import (
     ServiceNotFoundError,
     SlotService,
 )
-from .filters import MasterAppointmentFilter, MasterAppointmentHistoryFilter
+from .filters import MasterAppointmentFilter, MasterAppointmentHistoryFilter, AppointmentListFilter
 from .models import Appointment
 from .serializers import (
     AppointmentSerializer,
@@ -59,7 +61,7 @@ from .serializers import (
     MasterStatusUpdateSerializer,
     RescheduleSerializer,
     CreateAppointmentSerializer,
-    AppointmentDetailSerializer,
+    AppointmentDetailSerializer, AppointmentListSerializer,
 )
 
 
@@ -118,6 +120,77 @@ class ClientAppointmentListView(generics.ListAPIView):
     def get_queryset(self) -> QuerySet[Appointment]:
         # Filter appointments to display only those belonging to the logged-in client
         return Appointment.objects.filter(client=self.request.user)
+
+
+@extend_schema(
+    summary="Get Appointment List",
+    description=(
+        "Retrieve a paginated list of appointments with role-based access control, "
+        "filtering (by date, status, salon, master, service, client), and sorting."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="client",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter by client name/email (Administrators only).",
+        ),
+        OpenApiParameter(
+            name="ordering",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description=(
+                "Which field to use when ordering the results. Options: `start`, `created_at`, `status`. "
+                "Prefix with `-` for descending order (e.g. `-start`). Default is `-start`."
+            ),
+            enum=["start", "-start", "created_at", "-created_at", "status", "-status"],
+        ),
+    ],
+    responses={
+        200: AppointmentListSerializer(many=True),
+        401: OpenApiResponse(description="Authentication credentials were not provided"),
+        403: OpenApiResponse(description="You do not have permission to perform this action"),
+    },
+)
+class AppointmentListView(generics.ListAPIView):
+    """
+    GET /api/v1/appointments/
+
+    Provides a paginated list of appointments with filtering and sorting capabilities.
+    Access scope is restricted based on user role:
+      - Clients see only their own appointments.
+      - Masters see appointments assigned to them.
+      - Admins see all appointments and can filter by client.
+    """
+
+    serializer_class = AppointmentListSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = AppointmentListFilter
+
+    ordering_fields = ["start", "created_at", "status"]
+    ordering = ["-start"]
+
+    def get_queryset(self) -> QuerySet[Appointment]:
+        user = self.request.user
+        queryset = Appointment.objects.select_related("client", "master", "salon", "service")
+
+        # Prevent non-admins from filtering by "client"
+        if "client" in self.request.query_params and not (user.is_staff or user.is_superuser):
+            raise PermissionDenied("Фільтрація за клієнтом доступна тільки адміністраторам.")
+
+        # Admins have access to all records
+        if user.is_staff or user.is_superuser:
+            return queryset.all()
+
+        # Masters only see records assigned to them
+        if hasattr(user, "master_profile"):
+            return queryset.filter(master=user.master_profile)
+        if hasattr(user, "master"):
+            return queryset.filter(master=user.master)
+
+        # Regular clients only see their own records
+        return queryset.filter(client=user)
 
 
 @extend_schema(
@@ -199,7 +272,7 @@ class CancelAppointmentView(generics.UpdateAPIView):
         appointment = super().get_object()
         user = self.request.user
 
-        # 1. Checking roles and access rights
+        # Checking roles and access rights
         is_admin = user.is_staff or user.is_superuser
         is_client = appointment.client == user
         is_master = hasattr(appointment.master, "user") and appointment.master.user == user

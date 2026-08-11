@@ -292,3 +292,56 @@ class AppointmentDetailSerializer(serializers.ModelSerializer):
             "email": getattr(obj.client, "email", None),
             "phone": getattr(obj.client, "phone", None),
         }
+
+
+class AppointmentListSerializer(serializers.ModelSerializer):
+    appointment_id = serializers.IntegerField(source="id", read_only=True)
+    appointment_date = serializers.SerializerMethodField()
+    appointment_time = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
+    master_name = serializers.SerializerMethodField()
+    salon_name = serializers.CharField(source="salon.name", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    appointment_status = serializers.CharField(source="status", read_only=True)
+    total_price = serializers.DecimalField(
+        source="service.price", max_digits=8, decimal_places=2, read_only=True
+    )
+    created_date = serializers.DateTimeField(source="created_at", read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "appointment_id",
+            "appointment_date",
+            "appointment_time",
+            "client_name",
+            "master_name",
+            "salon_name",
+            "service_name",
+            "appointment_status",
+            "total_price",
+            "created_date",
+        ]
+
+    # noinspection PyMethodMayBeStatic
+    def get_appointment_date(self, obj) -> str | None:
+        return obj.start.strftime("%Y-%m-%d") if obj.start else None
+
+    # noinspection PyMethodMayBeStatic
+    def get_appointment_time(self, obj) -> str | None:
+        return obj.start.strftime("%H:%M") if obj.start else None
+
+    # noinspection PyMethodMayBeStatic
+    def get_client_name(self, obj) -> str | None:
+        if not obj.client:
+            return None
+        return obj.client.get_full_name() or obj.client.email
+
+    # noinspection PyMethodMayBeStatic
+    def get_master_name(self, obj) -> str | None:
+        if not obj.master:
+            return None
+        user = getattr(obj.master, "user", obj.master)
+        if hasattr(user, "get_full_name"):
+            return user.get_full_name() or getattr(user, "email", str(user))
+        return str(user)
