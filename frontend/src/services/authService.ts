@@ -23,7 +23,7 @@ export const sendGoogleTokenToBackend = async (idToken: string) => {
       id_token: idToken,
     };
 
-    const response = await fetch(`${API_BASE_URL}/auth/google`, {
+    const response = await fetch(`${API_BASE_URL}/users/google-login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ export const verifyToken = async (token?: string) => {
 };
 
 export const verifyEmail = async (uidb64: string, token: string) => {
-  const response = await fetch(`${API_BASE_URL}/auth/verify-email/`, {
+  const response = await fetch(`${API_BASE_URL}/users/verify-email/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
