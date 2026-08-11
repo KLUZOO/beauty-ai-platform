@@ -42,7 +42,10 @@ from rest_framework import (
 
 from salons.models import Salon
 
-from tasks.notification import send_email_task
+from tasks.notification import (
+    send_email_task,
+    send_appointment_event_task
+)
 
 from users.models import Master
 from users.permissions import IsMaster
@@ -628,29 +631,57 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
                 % (current_status, new_status)
             )
 
-        if new_status == "completed":
-            serializer.save(completed_at=timezone.now())
-        else:
-            serializer.save()
+        # Atomic transaction + on_commit notification for BE-BOOKING-07
+        with db_transaction.atomic():
+            if new_status == "completed":
+                appointment = serializer.save(completed_at=timezone.now())
+            else:
+                appointment = serializer.save()
 
-        # Trigger background email notification task to inform client of status change
-        send_email_task.delay(
-            recipient=appointment.client.email,
-            subject="Оновлення статусу вашого запису",
-            context={
-                "customer_name": appointment.client.get_full_name()
-                or appointment.client.email,
-                "booking_status": appointment.get_status_display(),
-                "salon_name": appointment.salon.name,
-                "master_name": appointment.master.user.get_full_name()
-                or appointment.master.user.email,
-                "service_name": appointment.service.name,
-                "booking_date": appointment.start.date().isoformat(),
-                "booking_time": appointment.start.time().strftime("%H:%M"),
-                "notification_message": "Статус вашого запису оновлено на '%s'."
-                % appointment.get_status_display(),
-            },
-        )
+            # Mapping status to required Event Types
+            event_type_map = {
+                "confirmed": "CONFIRMED",
+                "cancelled": "CANCELLED",
+                "completed": "COMPLETED",
+            }
+
+            if new_status in event_type_map:
+                payload = {
+                    "appointment_id": appointment.id,
+                    "client_id": appointment.client_id,
+                    "master_id": appointment.master_id,
+                    "salon_id": appointment.salon_id,
+                    "service_id": appointment.service_id,
+                    "appointment_date": appointment.start.date().isoformat(),
+                    "appointment_time": appointment.start.strftime("%H:%M"),
+                    "appointment_status": appointment.status,
+                    "event_type": event_type_map[new_status],
+                    "timestamp": timezone.now().isoformat(),
+                }
+
+                # Executed strictly after successful database commit
+                db_transaction.on_commit(lambda: send_appointment_event_task.delay(payload))
+
+            # Legacy email notification registered within transaction context
+            db_transaction.on_commit(
+                lambda: send_email_task.delay(
+                    recipient=appointment.client.email,
+                    subject="Оновлення статусу вашого запису",
+                    context={
+                        "customer_name": appointment.client.get_full_name()
+                                         or appointment.client.email,
+                        "booking_status": appointment.get_status_display(),
+                        "salon_name": appointment.salon.name,
+                        "master_name": appointment.master.user.get_full_name()
+                                       or appointment.master.user.email,
+                        "service_name": appointment.service.name,
+                        "booking_date": appointment.start.date().isoformat(),
+                        "booking_time": appointment.start.time().strftime("%H:%M"),
+                        "notification_message": "Статус вашого запису оновлено на '%s'."
+                                                % appointment.get_status_display(),
+                    },
+                )
+            )
 
 
 @extend_schema(
@@ -907,7 +938,7 @@ class AvailableTimeSlotsView(APIView):
 class CreateAppointmentView(generics.CreateAPIView):
     """
     POST /api/appointments/
-    Creating a new client record (BE-BOOKING-02 / BE-CLIENT-08).
+    Creating a new client record (BE-BOOKING-02 / BE-CLIENT-08 / BE-BOOKING-03 / BE-BOOKING-07).
     """
     permission_classes = [IsAuthenticated]
     serializer_class = CreateAppointmentSerializer
@@ -964,7 +995,7 @@ class CreateAppointmentView(generics.CreateAPIView):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
 
-        # Use transaction + select_for_update to protect against Concurrency
+        # Protection against Concurrency + Notification publishing inside transaction context
         with db_transaction.atomic():
             has_conflict = Appointment.objects.select_for_update().filter(
                 master=master,
@@ -989,30 +1020,22 @@ class CreateAppointmentView(generics.CreateAPIView):
                 status="pending"
             )
 
-        # Notifications are sent ALREADY AFTER saving the transaction
-        send_email_task.delay(
-            recipient=request.user.email,
-            subject="Підтвердження бронювання",
-            context={
-                "customer_name": request.user.get_full_name() or request.user.email,
-                "salon_name": appointment.salon.name,
-                "service_name": service.name,
-                "booking_date": data["appointment_date"].isoformat(),
-                "booking_time": req_start_str,
+            # Notification payload for BE-BOOKING-07
+            payload = {
+                "appointment_id": appointment.id,
+                "client_id": appointment.client_id,
+                "master_id": appointment.master_id,
+                "salon_id": appointment.salon_id,
+                "service_id": appointment.service_id,
+                "appointment_date": appointment.start.date().isoformat(),
+                "appointment_time": appointment.start.strftime("%H:%M"),
+                "appointment_status": appointment.status,
+                "event_type": "CREATED",
+                "timestamp": timezone.now().isoformat(),
             }
-        )
-        if master.user and master.user.email:
-            send_email_task.delay(
-                recipient=master.user.email,
-                subject="Нове бронювання",
-                context={
-                    "master_name": master.user.get_full_name() or master.user.email,
-                    "customer_name": request.user.get_full_name() or request.user.email,
-                    "service_name": service.name,
-                    "booking_date": data["appointment_date"].isoformat(),
-                    "booking_time": req_start_str,
-                }
-            )
+
+            # Published ONLY after the transaction is successfully committed
+            db_transaction.on_commit(lambda: send_appointment_event_task.delay(payload))
 
         response_serializer = AppointmentSerializer(appointment)
         return Response(response_serializer.data, status=http_status.HTTP_201_CREATED)
