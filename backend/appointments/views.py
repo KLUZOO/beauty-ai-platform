@@ -3,8 +3,13 @@ from datetime import (
     timedelta
 )
 
+from django_filters import OrderingFilter
+
 from beauty_service.models import Service
-from django.db.models import QuerySet
+from django.db.models import (
+    QuerySet,
+    Q
+)
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -48,7 +53,12 @@ from appointments.services.availability import (
     ServiceNotFoundError,
     SlotService,
 )
-from .filters import MasterAppointmentFilter, MasterAppointmentHistoryFilter, AppointmentListFilter
+from .filters import (
+    MasterAppointmentFilter,
+    MasterAppointmentHistoryFilter,
+    AppointmentListFilter,
+    AppointmentHistoryFilter
+)
 from .models import Appointment
 from .serializers import (
     AppointmentSerializer,
@@ -61,7 +71,9 @@ from .serializers import (
     MasterStatusUpdateSerializer,
     RescheduleSerializer,
     CreateAppointmentSerializer,
-    AppointmentDetailSerializer, AppointmentListSerializer,
+    AppointmentDetailSerializer,
+    AppointmentListSerializer,
+    AppointmentHistorySerializer
 )
 
 
@@ -894,12 +906,12 @@ class AvailableTimeSlotsView(APIView):
 class CreateAppointmentView(generics.CreateAPIView):
     """
     POST /api/appointments/
-    Створення нового запису клієнтом (BE-BOOKING-02 / BE-CLIENT-08).
+    Creating a new client record (BE-BOOKING-02 / BE-CLIENT-08).
     """
     permission_classes = [IsAuthenticated]
     serializer_class = CreateAppointmentSerializer
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -1040,3 +1052,39 @@ class AppointmentDetailView(generics.RetrieveAPIView):
             raise PermissionDenied("У вас немає доступу до перегляду цього запису.")
 
         return appointment
+
+
+class AppointmentHistoryView(generics.ListAPIView):
+    serializer_class = AppointmentHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_class = AppointmentHistoryFilter
+    ordering_fields = ["start", "created_at", "status"]
+    ordering = ["-start"]
+
+    def get_queryset(self) -> QuerySet[Appointment, Appointment]:
+        user = self.request.user
+        now = timezone.now()
+
+        # Role differentiation
+        role = getattr(user, "role", "").upper()
+        if role == "ADMIN" or user.is_staff or user.is_superuser:
+            qs = Appointment.objects.all()
+        elif role == "MASTER" or hasattr(user, "master_profile"):
+            qs = Appointment.objects.filter(master__user=user)
+        else:
+            qs = Appointment.objects.filter(client=user)
+
+        # Filtering historical records:
+        # The sample includes: completed, canceled, no_show OR those where the start time has already passed
+        historical_statuses = ["completed", "cancelled", "no_show"]
+        active_statuses = ["pending", "confirmed", "in_progress"]
+
+        return qs.filter(
+            Q(status__in=historical_statuses) |
+            Q(start__lt=now)
+        ).exclude(
+            # Exclude future/active entries
+            status__in=active_statuses,
+            start__gte=now
+        ).select_related("client", "master", "salon", "service")
