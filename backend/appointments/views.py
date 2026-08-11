@@ -10,6 +10,7 @@ from django.db.models import (
     QuerySet,
     Q
 )
+from django.db import transaction as db_transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -916,7 +917,6 @@ class CreateAppointmentView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        # Getting the wizard and service (404 if not found)
         try:
             master = Master.objects.get(pk=data["master_id"])
         except Master.DoesNotExist:
@@ -927,7 +927,6 @@ class CreateAppointmentView(generics.CreateAPIView):
         except Service.DoesNotExist:
             return Response({"detail": "Послугу не знайдено."}, status=http_status.HTTP_404_NOT_FOUND)
 
-        # Calculating start and end datetimes
         tz = timezone.get_current_timezone()
         start_dt = timezone.make_aware(
             datetime.combine(data["appointment_date"], data["appointment_time"]),
@@ -935,14 +934,12 @@ class CreateAppointmentView(generics.CreateAPIView):
         )
         end_dt = start_dt + timedelta(minutes=service.duration_minutes)
 
-        # Check: Future tense
         if start_dt <= timezone.now():
             return Response(
                 {"detail": "Час запису повинен бути у майбутньому."},
                 status=http_status.HTTP_400_BAD_REQUEST
             )
 
-        # Checking available slots via SlotService (working hours, weekends, breaks)
         slot_service = SlotService(
             master_id=master.id,
             service_id=service.id,
@@ -958,7 +955,6 @@ class CreateAppointmentView(generics.CreateAPIView):
         except (MasterNotFoundError, ServiceNotFoundError, InvalidDateError) as e:
             return Response({"detail": str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
 
-        # Check if the selected time slot is in the list of available ones
         req_start_str = data["appointment_time"].strftime("%H:%M")
         is_slot_available = any(s["start"] == req_start_str for s in available_slots)
 
@@ -968,32 +964,32 @@ class CreateAppointmentView(generics.CreateAPIView):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
 
-        # Conflict prevention (Double-booking check) -> 409 Conflict
-        has_conflict = Appointment.objects.filter(
-            master=master,
-            start__lt=end_dt,
-            end__gt=start_dt
-        ).exclude(status__in=["cancelled", "no_show"]).exists()
+        # Use transaction + select_for_update to protect against Concurrency
+        with db_transaction.atomic():
+            has_conflict = Appointment.objects.select_for_update().filter(
+                master=master,
+                start__lt=end_dt,
+                end__gt=start_dt
+            ).exclude(status__in=["cancelled", "no_show"]).exists()
 
-        if has_conflict:
-            return Response(
-                {"detail": "Обраний слот вже зайнятий іншим бронюванням."},
-                status=http_status.HTTP_409_CONFLICT
+            if has_conflict:
+                return Response(
+                    {"detail": "Обраний слот вже зайнятий іншим бронюванням."},
+                    status=http_status.HTTP_409_CONFLICT
+                )
+
+            appointment = Appointment.objects.create(
+                client=request.user,
+                master=master,
+                salon=master.salon,
+                service=service,
+                start=start_dt,
+                end=end_dt,
+                notes=data.get("notes", ""),
+                status="pending"
             )
 
-        # Creating a record (Client ID is taken from request.user)
-        appointment = Appointment.objects.create(
-            client=request.user,
-            master=master,
-            salon=master.salon,
-            service=service,
-            start=start_dt,
-            end=end_dt,
-            notes=data.get("notes", ""),
-            status="pending"
-        )
-
-        # Notifications (Email to client and master)
+        # Notifications are sent ALREADY AFTER saving the transaction
         send_email_task.delay(
             recipient=request.user.email,
             subject="Підтвердження бронювання",
