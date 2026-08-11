@@ -101,6 +101,38 @@ const storeAccessToken = (access: string) => {
   localStorage.setItem('authToken', access);
 };
 
+const parseErrorResponse = async (response: Response) => {
+  const contentType = response.headers.get('content-type') ?? '';
+  const responseText = await response.text().catch(() => '');
+
+  if (contentType.includes('application/json')) {
+    try {
+      const errorData = JSON.parse(responseText);
+      return (
+        errorData?.message ||
+        errorData?.detail ||
+        errorData?.error ||
+        (typeof errorData === 'string'
+          ? errorData
+          : JSON.stringify(errorData)) ||
+        response.statusText ||
+        `Request failed with status ${response.status}`
+      );
+    } catch {
+      // fall through to text fallback
+    }
+  }
+
+  if (responseText) {
+    if (/<(html|!doctype)/i.test(responseText)) {
+      return `Server error ${response.status} ${response.statusText}. Backend is unavailable.`;
+    }
+    return responseText;
+  }
+
+  return `Request failed with status ${response.status} ${response.statusText}`;
+};
+
 export const getRefreshToken = () => {
   return localStorage.getItem('refreshToken');
 };
@@ -198,23 +230,7 @@ export const registerUser = async (payload: ExtendedRegisterPayload) => {
     });
 
     if (!response.ok) {
-      const responseText = await response.text();
-      let errorMessage = `Registration failed with status ${response.status}`;
-
-      try {
-        const errorData = JSON.parse(responseText);
-        errorMessage =
-          errorData?.message ||
-          errorData?.detail ||
-          errorData?.error ||
-          JSON.stringify(errorData) ||
-          errorMessage;
-      } catch {
-        if (responseText) {
-          errorMessage = responseText;
-        }
-      }
-
+      const errorMessage = await parseErrorResponse(response);
       throw new Error(errorMessage);
     }
 
