@@ -208,3 +208,87 @@ class CreateAppointmentSerializer(serializers.Serializer):
         if value < timezone.localdate():
             raise serializers.ValidationError("Неможливо створити запис на минулу дату.")
         return value
+
+
+class AppointmentDetailSerializer(serializers.ModelSerializer):
+    appointment_id = serializers.IntegerField(source="id", read_only=True)
+    appointment_date = serializers.SerializerMethodField()
+    appointment_time = serializers.SerializerMethodField()
+    appointment_status = serializers.CharField(source="status", read_only=True)
+
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    service_duration = serializers.IntegerField(source="service.duration_minutes", read_only=True)
+    service_price = serializers.DecimalField(source="service.price", max_digits=8, decimal_places=2, read_only=True)
+
+    salon_name = serializers.CharField(source="salon.name", read_only=True)
+    salon_address = serializers.CharField(source="salon.address", read_only=True)
+
+    master_id = serializers.SerializerMethodField()
+    master_name = serializers.SerializerMethodField()
+
+    client_id = serializers.IntegerField(source="client.id", read_only=True)
+    client_name = serializers.SerializerMethodField()
+    client_contact_information = serializers.SerializerMethodField()
+
+    appointment_notes = serializers.ReadOnlyField(source="notes")
+    created_date = serializers.DateTimeField(source="created_at", read_only=True)
+    last_updated_date = serializers.DateTimeField(source="updated_at", read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "appointment_id",
+            "appointment_date",
+            "appointment_time",
+            "appointment_status",
+            "service_name",
+            "service_duration",
+            "service_price",
+            "salon_name",
+            "salon_address",
+            "master_id",
+            "master_name",
+            "client_id",
+            "client_name",
+            "client_contact_information",
+            "appointment_notes",
+            "created_date",
+            "last_updated_date",
+        ]
+
+    # noinspection PyMethodMayBeStatic
+    def get_appointment_date(self, obj) -> str:
+        return obj.start.strftime("%Y-%m-%d") if obj.start else None
+
+    # noinspection PyMethodMayBeStatic
+    def get_appointment_time(self, obj) -> str:
+        return obj.start.strftime("%H:%M") if obj.start else None
+
+    # noinspection PyMethodMayBeStatic
+    def get_master_id(self, obj) -> int:
+        return obj.master.id if obj.master else None
+
+    # noinspection PyMethodMayBeStatic
+    def get_master_name(self, obj) -> str:
+        if not obj.master:
+            return None
+        # Перевірка на наявність користувача або профілю
+        user = getattr(obj.master, "user", obj.master)
+        if hasattr(user, "get_full_name"):
+            return user.get_full_name() or getattr(user, "email", str(user))
+        return str(user)
+
+    # noinspection PyMethodMayBeStatic
+    def get_client_name(self, obj) -> str:
+        if not obj.client:
+            return None
+        return obj.client.get_full_name() or obj.client.email
+
+    # noinspection PyMethodMayBeStatic
+    def get_client_contact_information(self, obj) -> dict:
+        if not obj.client:
+            return {}
+        return {
+            "email": getattr(obj.client, "email", None),
+            "phone": getattr(obj.client, "phone", None),
+        }

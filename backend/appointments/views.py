@@ -30,8 +30,12 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import generics, permissions
+
 from salons.models import Salon
+
 from tasks.notification import send_email_task
+
 from users.models import Master
 from users.permissions import IsMaster
 
@@ -55,6 +59,7 @@ from .serializers import (
     MasterStatusUpdateSerializer,
     RescheduleSerializer,
     CreateAppointmentSerializer,
+    AppointmentDetailSerializer,
 )
 
 
@@ -930,3 +935,35 @@ class CreateAppointmentView(generics.CreateAPIView):
 
         response_serializer = AppointmentSerializer(appointment)
         return Response(response_serializer.data, status=http_status.HTTP_201_CREATED)
+
+
+class AppointmentDetailView(generics.RetrieveAPIView):
+    """
+    GET /api/v1/appointments/<id>/
+
+    Get detailed information about a specific appointment (BE-BOOKING-05).
+    """
+    serializer_class = AppointmentDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Appointment.objects.select_related("client", "master", "salon", "service").all()
+
+    def get_object(self) -> Appointment:
+        appointment = super().get_object()
+        user = self.request.user
+
+        # Roles
+        is_admin = user.is_staff or user.is_superuser
+        is_client = appointment.client == user
+
+        # Check the master (whether the user is bound to the master)
+        is_master = False
+        if appointment.master:
+            master_user = getattr(appointment.master, "user", None)
+            if master_user == user:
+                is_master = True
+
+        # Rights check
+        if not (is_admin or is_client or is_master):
+            raise PermissionDenied("У вас немає доступу до перегляду цього запису.")
+
+        return appointment
