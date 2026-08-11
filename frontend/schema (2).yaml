@@ -1,0 +1,4360 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+paths:
+  /api/appointments/{appointment_id}/review/:
+    get:
+      operationId: appointments_review_retrieve
+      summary: Get review for specific appointment
+      parameters:
+      - in: path
+        name: appointment_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided
+        '404':
+          description: Review not found
+    post:
+      operationId: appointments_review_create
+      summary: Create review for specific appointment
+      parameters:
+      - in: path
+        name: appointment_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AppointmentReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AppointmentReview'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '400':
+          description: Validation error (e.g., review already exists, appointment
+            is not completed, or not owned by user)
+        '401':
+          description: Authentication credentials were not provided
+        '404':
+          description: Appointment not found
+    patch:
+      operationId: appointments_review_partial_update
+      summary: Update review for specific appointment
+      parameters:
+      - in: path
+        name: appointment_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAppointmentReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAppointmentReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAppointmentReview'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '400':
+          description: Validation error
+        '401':
+          description: Authentication credentials were not provided
+        '404':
+          description: Review not found
+    delete:
+      operationId: appointments_review_destroy
+      summary: Delete review for specific appointment
+      parameters:
+      - in: path
+        name: appointment_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Review successfully deleted
+        '401':
+          description: Authentication credentials were not provided
+        '404':
+          description: Review not found
+  /api/appointments/{id}/cancel/:
+    patch:
+      operationId: appointments_cancel_partial_update
+      description: Cancels the customer's upcoming booking (sets the status to 'cancelled').
+        Request body is optional.
+      summary: Cancel client appointment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '400':
+          description: Validation error (e.g. appointment is already completed or
+            cancelled)
+        '401':
+          description: Authentication credentials were not provided
+        '404':
+          description: Appointment not found or does not belong to the user
+  /api/appointments/{id}/reschedule/:
+    patch:
+      operationId: appointments_reschedule_partial_update
+      description: Moves an existing customer reservation to a new datetime interval.
+      summary: Reschedule client appointment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReschedule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReschedule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReschedule'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reschedule'
+          description: ''
+        '400':
+          description: Validation error (e.g., end time is before start time, or appointment
+            is already completed/cancelled)
+        '401':
+          description: Authentication credentials were not provided
+        '404':
+          description: Appointment not found or does not belong to the user
+  /api/appointments/{id}/status/:
+    patch:
+      operationId: appointments_status_partial_update
+      description: |-
+        Allows an authenticated master to update the status of their assigned appointment.
+
+        **Allowed status transitions:**
+        - `pending` ➔ `confirmed`, `cancelled`
+        - `confirmed` ➔ `in_progress`, `cancelled`
+        - `in_progress` ➔ `completed`
+        - `completed` ➔ (none, final status)
+        - `cancelled` ➔ (none, final status)
+
+        **Note:** If status is set to `cancelled`, `cancellation_reason` is required.
+      summary: Update appointment status by master
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMasterStatusUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMasterStatusUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMasterStatusUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterStatusUpdate'
+          description: ''
+        '400':
+          description: Validation error (e.g. missing cancellation_reason when status='cancelled')
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied or appointment not assigned to this master
+        '404':
+          description: Appointment not found
+        '409':
+          description: Status transition conflict (e.g. invalid status transition
+            like completed ➔ in_progress)
+  /api/appointments/available-slots/:
+    get:
+      operationId: appointments_available_slots_retrieve
+      description: |-
+        Returns a list of available time slots for booking, grouped by date.
+
+        Required query parameters: `salon`, `master`, `service`, `date_from`.
+      summary: Get available booking slots
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: 'Start date for slot lookup (format: YYYY-MM-DD)'
+        required: true
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: 'End date for slot lookup (format: YYYY-MM-DD, inclusive; defaults
+          to date_from)'
+      - in: query
+        name: master
+        schema:
+          type: integer
+        description: ID of the master (used to query busy time ranges)
+        required: true
+      - in: query
+        name: salon
+        schema:
+          type: integer
+        description: ID of the salon (used to fetch daily working hours)
+        required: true
+      - in: query
+        name: service
+        schema:
+          type: integer
+        description: ID of the service (used to compute required slot duration)
+        required: true
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                AvailableSlotsExample:
+                  value:
+                    '2026-08-01':
+                    - start: '10:00'
+                      end: '10:45'
+                    - start: '10:15'
+                      end: '11:00'
+                    '2026-08-02': []
+                  summary: Available slots example
+          description: Map of dates to array of available time slots
+        '400':
+          description: Validation error (missing required parameters, invalid date
+            format, or invalid IDs)
+        '401':
+          description: Authentication credentials were not provided
+  /api/appointments/master/{id}/:
+    get:
+      operationId: appointments_master_retrieve
+      description: Retrieve detailed information about a specific appointment assigned
+        to the currently authenticated master.
+      summary: Get master appointment detail
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterAppointmentDetail'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied (Requires master profile)
+        '404':
+          description: Appointment not found or not assigned to this master
+  /api/appointments/master/active/:
+    get:
+      operationId: appointments_master_active_list
+      description: Returns active appointments (pending, confirmed, in_progress) assigned
+        to the current master.
+      summary: List active master appointments
+      parameters:
+      - in: query
+        name: appointment_date
+        schema:
+          type: string
+          format: date
+        description: Filter by date (YYYY-MM-DD)
+      - in: query
+        name: client
+        schema:
+          type: string
+        description: Filter by client email (contains)
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Ordering: start, created_at, status, service__price (prefix
+          with ''-'' for descending)'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: service
+        schema:
+          type: string
+        description: Filter by service name (contains)
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Filter by status (pending, confirmed, in_progress)
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMasterAppointmentListList'
+          description: ''
+  /api/appointments/master/history/:
+    get:
+      operationId: appointments_master_history_list
+      description: Returns completed and canceled appointments assigned to the currently
+        authenticated master.
+      summary: List master appointment history
+      parameters:
+      - in: query
+        name: client
+        schema:
+          type: string
+        description: Filter by client email (contains)
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Filter from this date (YYYY-MM-DD)
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Filter to this date (YYYY-MM-DD)
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Ordering: start, created_at, status, service__price (prefix
+          with ''-'' for descending)'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: service
+        schema:
+          type: string
+        description: Filter by service name (contains)
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Filter by status (completed, cancelled)
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMasterAppointmentHistoryList'
+          description: ''
+  /api/appointments/my/:
+    get:
+      operationId: appointments_my_list
+      description: Retrieve a list of reservations for the currently authenticated
+        client.
+      summary: List client appointments
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -created_at
+          - -start
+          - created_at
+          - start
+        description: 'Which field to use when ordering the results. Options: `start`,
+          `created_at`. Prefix with `-` for descending order (e.g. `-start`). Default
+          is `-start`.'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - cancelled
+          - completed
+          - confirmed
+          - in_progress
+          - no_show
+          - pending
+        description: Filter appointments by status (e.g. pending, confirmed, completed,
+          cancelled, in_progress, no_show)
+      tags:
+      - appointments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAppointmentList'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided
+  /api/dashboard-statistics/masters/me/:
+    get:
+      operationId: dashboard_statistics_masters_me_retrieve
+      tags:
+      - dashboard-statistics
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/payments/:
+    get:
+      operationId: payments_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentList'
+          description: ''
+    post:
+      operationId: payments_create
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Payment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Payment'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/payments/{id}/:
+    get:
+      operationId: payments_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    put:
+      operationId: payments_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Payment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Payment'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    patch:
+      operationId: payments_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPayment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPayment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPayment'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    delete:
+      operationId: payments_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/promotions/:
+    get:
+      operationId: promotions_list
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Filter promotions by active status. true - only active promotions,
+          false - only inactive promotions.
+      - in: query
+        name: discount_percent
+        schema:
+          type: integer
+        description: Filter promotions by discount percentage (0-100).
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: salon_id
+        schema:
+          type: integer
+        description: Filter promotions by salon ID.
+      tags:
+      - promotions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPromotionList'
+          description: ''
+    post:
+      operationId: promotions_create
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Filter promotions by active status. true - only active promotions,
+          false - only inactive promotions.
+      - in: query
+        name: discount_percent
+        schema:
+          type: integer
+        description: Filter promotions by discount percentage (0-100).
+      - in: query
+        name: salon_id
+        schema:
+          type: integer
+        description: Filter promotions by salon ID.
+      tags:
+      - promotions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Promotion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Promotion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Promotion'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+          description: ''
+  /api/promotions/{id}/:
+    get:
+      operationId: promotions_retrieve
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Filter promotions by active status. true - only active promotions,
+          false - only inactive promotions.
+      - in: query
+        name: discount_percent
+        schema:
+          type: integer
+        description: Filter promotions by discount percentage (0-100).
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Promotion.
+        required: true
+      - in: query
+        name: salon_id
+        schema:
+          type: integer
+        description: Filter promotions by salon ID.
+      tags:
+      - promotions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+          description: ''
+    put:
+      operationId: promotions_update
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Filter promotions by active status. true - only active promotions,
+          false - only inactive promotions.
+      - in: query
+        name: discount_percent
+        schema:
+          type: integer
+        description: Filter promotions by discount percentage (0-100).
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Promotion.
+        required: true
+      - in: query
+        name: salon_id
+        schema:
+          type: integer
+        description: Filter promotions by salon ID.
+      tags:
+      - promotions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Promotion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Promotion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Promotion'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+          description: ''
+    patch:
+      operationId: promotions_partial_update
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Filter promotions by active status. true - only active promotions,
+          false - only inactive promotions.
+      - in: query
+        name: discount_percent
+        schema:
+          type: integer
+        description: Filter promotions by discount percentage (0-100).
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Promotion.
+        required: true
+      - in: query
+        name: salon_id
+        schema:
+          type: integer
+        description: Filter promotions by salon ID.
+      tags:
+      - promotions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPromotion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPromotion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPromotion'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+          description: ''
+    delete:
+      operationId: promotions_destroy
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Filter promotions by active status. true - only active promotions,
+          false - only inactive promotions.
+      - in: query
+        name: discount_percent
+        schema:
+          type: integer
+        description: Filter promotions by discount percentage (0-100).
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Promotion.
+        required: true
+      - in: query
+        name: salon_id
+        schema:
+          type: integer
+        description: Filter promotions by salon ID.
+      tags:
+      - promotions
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/referral-events/:
+    get:
+      operationId: referral_events_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - referral-events
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReferralEventList'
+          description: ''
+    post:
+      operationId: referral_events_create
+      tags:
+      - referral-events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferralEvent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReferralEvent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReferralEvent'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralEvent'
+          description: ''
+  /api/referral-events/{id}/:
+    get:
+      operationId: referral_events_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - referral-events
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralEvent'
+          description: ''
+    put:
+      operationId: referral_events_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - referral-events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferralEvent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReferralEvent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReferralEvent'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralEvent'
+          description: ''
+    patch:
+      operationId: referral_events_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - referral-events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReferralEvent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReferralEvent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReferralEvent'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralEvent'
+          description: ''
+    delete:
+      operationId: referral_events_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - referral-events
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/reviews/:
+    get:
+      operationId: reviews_list
+      description: |-
+        GET /api/reviews/ — list of all reviews, available to anyone (even without authorization)
+        POST /api/reviews/ — leave a review for your completed booking, authorization required
+
+        Request body for POST: {"appointment": 5, "rating": 4, "comment": "..."}
+        client and master are determined automatically from appointment, they do not need to be passed.
+      summary: List all reviews
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - reviews
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReviewList'
+          description: ''
+    post:
+      operationId: reviews_create
+      description: |-
+        GET /api/reviews/ — list of all reviews, available to anyone (even without authorization)
+        POST /api/reviews/ — leave a review for your completed booking, authorization required
+
+        Request body for POST: {"appointment": 5, "rating": 4, "comment": "..."}
+        client and master are determined automatically from appointment, they do not need to be passed.
+      summary: Create a review
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Review'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Review'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+        '400':
+          description: Validation error (e.g., trying to review someone else's or
+            uncompleted appointment)
+        '401':
+          description: Authentication credentials were not provided
+  /api/reviews/{id}/:
+    get:
+      operationId: reviews_retrieve
+      description: |-
+        GET /api/reviews/<id>/ — details of one review, available to anyone.
+        Editing and deleting reviews is not yet provided.
+      summary: Retrieve a review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reviews
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+        '404':
+          description: Review not found
+  /api/reviews/{id}/masters/me/:
+    get:
+      operationId: reviews_masters_me_retrieve
+      summary: Retrieve a specific review for current master
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reviews
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterReview'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied
+        '404':
+          description: Review not found or does not belong to this master
+  /api/reviews/masters/me/:
+    get:
+      operationId: reviews_masters_me_list
+      description: Retrieve all reviews left for completed appointments of the authenticated
+        master.
+      summary: List reviews for current master
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Filter reviews created from this date (YYYY-MM-DD)
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Filter reviews created up to this date (YYYY-MM-DD)
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: rating
+        schema:
+          type: integer
+        description: Filter by exact rating (1 to 5)
+      - in: query
+        name: service
+        schema:
+          type: string
+        description: Filter by service name (case-insensitive search)
+      tags:
+      - reviews
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMasterReviewList'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied (Requires master profile)
+  /api/salons/:
+    get:
+      operationId: salons_list
+      description: Retrieves active salons containing active masters with at least
+        one active service. Includes calculated aggregations such as average ratings,
+        review counts, active master count, and working schedules.
+      summary: List active salons with details and metrics
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -name
+          - -popularity
+          - -rating
+          - -reviews
+          - name
+          - popularity
+          - rating
+          - reviews
+        description: 'Which field to use when ordering the results. Options: `rating`,
+          `reviews`, `popularity`, `name`. Prefix with `-` for descending order (e.g.,
+          `-rating`). Default is `-rating`.'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - salons
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSalonListList'
+          description: ''
+  /api/salons/{id}/:
+    get:
+      operationId: salons_retrieve
+      description: Get detailed raw information about a specific salon by ID.
+      summary: Retrieve a salon
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - salons
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salon'
+          description: ''
+        '404':
+          description: Salon not found
+    put:
+      operationId: salons_update
+      description: Update all fields of an existing salon. Restricted to staff users.
+      summary: Update a salon (full)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - salons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Salon'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Salon'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Salon'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salon'
+          description: ''
+        '400':
+          description: Validation error
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied
+        '404':
+          description: Salon not found
+    patch:
+      operationId: salons_partial_update
+      description: Partially update specific fields of a salon. Restricted to staff
+        users.
+      summary: Update a salon (partial)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - salons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSalon'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSalon'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSalon'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salon'
+          description: ''
+        '400':
+          description: Validation error
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied
+        '404':
+          description: Salon not found
+    delete:
+      operationId: salons_destroy
+      description: Permanently remove a salon record. Restricted to staff users.
+      summary: Delete a salon
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - salons
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Salon successfully deleted
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied
+        '404':
+          description: Salon not found
+  /api/salons/create-list/:
+    get:
+      operationId: salons_create_list_list
+      description: Retrieve a list of all raw salon entities. Accessible to unauthenticated
+        users.
+      summary: List all basic salons
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - salons
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSalonList'
+          description: ''
+    post:
+      operationId: salons_create_list_create
+      description: Create a new salon entry. Restricted to staff/admin users.
+      summary: Create a new salon
+      tags:
+      - salons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Salon'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Salon'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Salon'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salon'
+          description: ''
+        '400':
+          description: Validation error
+        '401':
+          description: Authentication credentials were not provided
+        '403':
+          description: Permission denied (Requires staff access)
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - ht
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/services/:
+    get:
+      operationId: services_list
+      description: Retrieve a list of active beauty services. Supports filtering by
+        name, category, salon, master, price range, city, and datetime availability
+        window.
+      summary: List active services
+      parameters:
+      - in: query
+        name: available_datetime_from
+        schema:
+          type: string
+          format: date-time
+        description: 'Start of datetime window for availability check (ISO 8601 format:
+          YYYY-MM-DDTHH:MM:SSZ). **Requires `available_datetime_to`**.'
+      - in: query
+        name: available_datetime_to
+        schema:
+          type: string
+          format: date-time
+        description: 'End of datetime window for availability check (ISO 8601 format:
+          YYYY-MM-DDTHH:MM:SSZ). **Must be later than `available_datetime_from`**.'
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Filter by category name (case-insensitive search)
+      - in: query
+        name: city
+        schema:
+          type: string
+        description: Filter by salon city (case-insensitive search)
+      - in: query
+        name: masters
+        schema:
+          type: string
+        description: Filter by master ID or comma-separated list of IDs (e.g. `5`
+          or `5,10`)
+      - in: query
+        name: max_price
+        schema:
+          type: number
+        description: Filter by maximum price (less than or equal)
+      - in: query
+        name: min_price
+        schema:
+          type: number
+        description: Filter by minimum price (greater than or equal)
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -duration_minutes
+          - -name
+          - -popularity
+          - -price
+          - duration_minutes
+          - name
+          - popularity
+          - price
+        description: 'Which field to use when ordering the results. Options: `name`,
+          `popularity`, `price`, `duration_minutes`. Prefix with `-` for descending
+          order.'
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: salons
+        schema:
+          type: string
+        description: Filter by salon ID or comma-separated list of IDs (e.g. `1` or
+          `1,2,3`)
+      - in: query
+        name: service_name
+        schema:
+          type: string
+        description: Filter by service name (case-insensitive search)
+      tags:
+      - services
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedServicesList'
+          description: ''
+        '400':
+          description: Validation error (e.g. `available_datetime_from` was passed
+            without `available_datetime_to`, or `available_datetime_to` is earlier
+            than `available_datetime_from`)
+  /api/users/favorite-masters/:
+    get:
+      operationId: users_favorite_masters_list
+      description: Returns the authenticated client's list of favorite masters. Only
+        active masters are included.
+      summary: Get favorite masters
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Favorite Masters
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFavoriteMasterList'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+  /api/users/favorite-masters/{master_id}/:
+    get:
+      operationId: users_favorite_masters_retrieve
+      description: Returns whether the specified master is in the authenticated client's
+        favorites.
+      summary: Check if master is in favorites
+      parameters:
+      - in: path
+        name: master_id
+        schema:
+          type: integer
+        description: ID of the master.
+        required: true
+      tags:
+      - Favorite Masters
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteMasterStatus'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+    post:
+      operationId: users_favorite_masters_create
+      description: Adds an active master to the authenticated client's favorite masters
+        list. A master can only be added once.
+      summary: Add master to favorites
+      parameters:
+      - in: path
+        name: master_id
+        schema:
+          type: integer
+        description: ID of the master to add to favorites.
+        required: true
+      tags:
+      - Favorite Masters
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteMaster'
+          description: ''
+        '400':
+          description: The master is already in favorites.
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+        '404':
+          description: Master not found or master is not active.
+    delete:
+      operationId: users_favorite_masters_destroy
+      description: Removes the specified master from the authenticated client's favorite
+        masters list. This does not affect appointment history.
+      summary: Remove master from favorites
+      parameters:
+      - in: path
+        name: master_id
+        schema:
+          type: integer
+        description: ID of the master to remove from favorites.
+        required: true
+      tags:
+      - Favorite Masters
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Master successfully removed from favorites.
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+        '404':
+          description: The master is not in the authenticated client's favorites.
+  /api/users/google-login/:
+    post:
+      operationId: users_google_login_create
+      description: Authenticates a user via Google ID Token and returns a pair of
+        JWT tokens (access and refresh).
+      summary: Google OAuth2 login
+      tags:
+      - Authentication & Registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLogin'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GoogleLogin'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GoogleLogin'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully authenticated. Returns JWT access and refresh
+            tokens.
+        '400':
+          description: Invalid Google token.
+  /api/users/masters/:
+    get:
+      operationId: users_masters_list
+      description: Returns a list of all active masters with optional ordering by
+        rating, name, experience, or popularity.
+      summary: List active masters
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Masters
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMasterListList'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+  /api/users/masters/me/:
+    get:
+      operationId: users_masters_me_retrieve
+      description: Returns the master profile associated with the currently authenticated
+        user.
+      summary: Retrieve master profile
+      tags:
+      - Master Profile
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterProfile'
+          description: ''
+        '403':
+          description: Permission denied. Access is restricted to masters only.
+    put:
+      operationId: users_masters_me_update
+      summary: Update master profile
+      tags:
+      - Master Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MasterProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MasterProfile'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterProfile'
+          description: ''
+        '400':
+          description: Validation error.
+        '403':
+          description: Permission denied. Access is restricted to masters only.
+    patch:
+      operationId: users_masters_me_partial_update
+      summary: Partially update master profile
+      tags:
+      - Master Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMasterProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMasterProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMasterProfile'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterProfile'
+          description: ''
+        '400':
+          description: Validation error.
+        '403':
+          description: Permission denied. Access is restricted to masters only.
+  /api/users/masters/me/day-offs/:
+    get:
+      operationId: users_masters_me_day_offs_list
+      description: Retrieves a list of scheduled days off/vacations for the authenticated
+        master.
+      summary: List days off
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Master Days Off
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDayOffList'
+          description: ''
+    post:
+      operationId: users_masters_me_day_offs_create
+      description: Creates a new day off entry for the authenticated master.
+      summary: Create day off
+      tags:
+      - Master Days Off
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DayOff'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DayOff'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DayOff'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayOff'
+          description: ''
+        '400':
+          description: Validation error (e.g., date range overlaps or conflicts with
+            confirmed appointments).
+  /api/users/masters/me/day-offs/{id}/:
+    get:
+      operationId: users_masters_me_day_offs_retrieve
+      summary: Retrieve day off details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Days Off
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayOff'
+          description: ''
+        '404':
+          description: Day off record not found.
+    put:
+      operationId: users_masters_me_day_offs_update
+      summary: Update day off
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Days Off
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DayOff'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DayOff'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DayOff'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayOff'
+          description: ''
+        '400':
+          description: Validation error.
+    patch:
+      operationId: users_masters_me_day_offs_partial_update
+      summary: Partially update day off
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Days Off
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDayOff'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDayOff'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDayOff'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayOff'
+          description: ''
+        '400':
+          description: Validation error.
+    delete:
+      operationId: users_masters_me_day_offs_destroy
+      summary: Delete day off
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Days Off
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Day off record successfully deleted.
+  /api/users/masters/me/working-schedule/:
+    get:
+      operationId: users_masters_me_working_schedule_list
+      description: Retrieves the recurring weekly working schedule for the authenticated
+        master.
+      summary: Get working schedule
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Master Working Schedule
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkingScheduleList'
+          description: ''
+        '403':
+          description: Permission denied. Access is restricted to masters only.
+    post:
+      operationId: users_masters_me_working_schedule_create
+      description: Creates a new working day schedule entry for the authenticated
+        master.
+      summary: Create working schedule entry
+      tags:
+      - Master Working Schedule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkingSchedule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkingSchedule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkingSchedule'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkingSchedule'
+          description: ''
+        '400':
+          description: Validation error (e.g., overlapping working hours or invalid
+            time sequence).
+        '403':
+          description: Permission denied. Access is restricted to masters only.
+  /api/users/masters/me/working-schedule/{id}/:
+    get:
+      operationId: users_masters_me_working_schedule_retrieve
+      summary: Retrieve working schedule details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Master Working Schedule
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkingSchedule'
+          description: ''
+        '404':
+          description: Working schedule entry not found.
+    put:
+      operationId: users_masters_me_working_schedule_update
+      summary: Update working schedule entry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Master Working Schedule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkingSchedule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkingSchedule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkingSchedule'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkingSchedule'
+          description: ''
+        '400':
+          description: Validation error.
+    patch:
+      operationId: users_masters_me_working_schedule_partial_update
+      summary: Partially update working schedule entry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Master Working Schedule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkingSchedule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkingSchedule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkingSchedule'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkingSchedule'
+          description: ''
+        '400':
+          description: Validation error.
+    delete:
+      operationId: users_masters_me_working_schedule_destroy
+      summary: Delete working schedule entry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Master Working Schedule
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Working schedule entry successfully deleted.
+  /api/users/me/:
+    get:
+      operationId: users_me_retrieve
+      description: Returns detailed profile information for the authenticated user.
+      summary: Retrieve user profile
+      tags:
+      - User Profile
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+    put:
+      operationId: users_me_update
+      description: Updates all fields of the authenticated user's profile.
+      summary: Update user profile
+      tags:
+      - User Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserProfile'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+        '400':
+          description: Validation error.
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+    patch:
+      operationId: users_me_partial_update
+      description: Updates specific fields of the authenticated user's profile.
+      summary: Partially update user profile
+      tags:
+      - User Profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfile'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+        '400':
+          description: Validation error.
+        '401':
+          description: Authentication credentials were not provided or are invalid.
+  /api/users/me/change-password/:
+    post:
+      operationId: users_me_change_password_create
+      description: Changes the password for the currently authenticated user. Requires
+        old password verification.
+      summary: Change user password
+      tags:
+      - Authentication & Registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Password changed successfully.
+        '400':
+          description: Incorrect old password or new password validation error.
+  /api/users/me/set-password/:
+    post:
+      operationId: users_me_set_password_create
+      description: Sets a password for users who registered via OAuth (e.g., Google)
+        and do not have a usable password yet.
+      summary: Set user password
+      tags:
+      - Authentication & Registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetPassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetPassword'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Password set successfully.
+        '400':
+          description: Password has already been set or invalid data provided.
+  /api/users/register/:
+    post:
+      operationId: users_register_create
+      description: Creates a new user account with email and password.
+      summary: Register a new user
+      tags:
+      - Authentication & Registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          description: Validation error (e.g., email already exists).
+  /api/users/token/:
+    post:
+      operationId: users_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/users/token/refresh/:
+    post:
+      operationId: users_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/users/token/verify/:
+    post:
+      operationId: users_token_verify_create
+      description: |-
+        Takes a token and indicates if it is valid.  This view provides no
+        information about a token's fitness for a particular use.
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerify'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerify'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerify'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenVerify'
+          description: ''
+  /api/users/verify-email/:
+    post:
+      operationId: users_verify_email_create
+      description: Verifies user email using the uidb64 and token received via email
+        confirmation link.
+      summary: Verify email address
+      tags:
+      - Authentication & Registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyEmail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmail'
+        required: true
+      responses:
+        '200':
+          description: Email verified successfully.
+        '400':
+          description: Invalid token or user ID.
+components:
+  schemas:
+    AccountStatusEnum:
+      enum:
+      - active
+      - inactive
+      - blocked
+      - deleted
+      - pending
+      type: string
+      description: |-
+        * `active` - Active
+        * `inactive` - Inactive
+        * `blocked` - Blocked
+        * `deleted` - Deleted
+        * `pending` - Pending
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        client:
+          type: integer
+          readOnly: true
+        master:
+          type: integer
+        salon:
+          type: integer
+        service:
+          type: integer
+        promo_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client
+      - created_at
+      - end
+      - id
+      - master
+      - salon
+      - service
+      - start
+    AppointmentReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        appointment:
+          type: integer
+          readOnly: true
+        client:
+          type: integer
+          readOnly: true
+        master:
+          type: integer
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comment:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - appointment
+      - client
+      - created_at
+      - id
+      - master
+      - rating
+    AssignedSalons:
+      type: object
+      description: Nested serializer for brief salon details.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+      required:
+      - id
+      - name
+    ChangePassword:
+      type: object
+      description: Serializer for handling password changes by authenticated users.
+      properties:
+        old_password:
+          type: string
+          writeOnly: true
+        new_password:
+          type: string
+          writeOnly: true
+      required:
+      - new_password
+      - old_password
+    DayOff:
+      type: object
+      description: Serializer for creating and validating a master's days off / vacations.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - end_date
+      - id
+      - start_date
+      - updated_at
+    FavoriteMaster:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        profile_photo:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        average_rating:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        salons:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalonShort'
+          readOnly: true
+        active_services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+          readOnly: true
+        favorite_created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - active_services
+      - average_rating
+      - favorite_created_at
+      - id
+      - name
+      - profile_photo
+      - salons
+    FavoriteMasterStatus:
+      type: object
+      properties:
+        is_favorite:
+          type: boolean
+      required:
+      - is_favorite
+    GoogleLogin:
+      type: object
+      description: Serializer for accepting Google ID tokens during OAuth2 authentication.
+      properties:
+        id_token:
+          type: string
+      required:
+      - id_token
+    MasterAppointmentDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        client_id:
+          type: integer
+          readOnly: true
+        client_name:
+          type: string
+          readOnly: true
+        client_phone:
+          type: string
+          readOnly: true
+        client_email:
+          type: string
+          format: email
+          readOnly: true
+        service_id:
+          type: integer
+          readOnly: true
+        service_name:
+          type: string
+          readOnly: true
+        service_duration:
+          type: integer
+          readOnly: true
+        service_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        salon_id:
+          type: integer
+          readOnly: true
+        salon_name:
+          type: string
+          readOnly: true
+        salon_address:
+          type: string
+          readOnly: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client_email
+      - client_id
+      - client_name
+      - client_phone
+      - created_at
+      - end
+      - id
+      - salon_address
+      - salon_id
+      - salon_name
+      - service_duration
+      - service_id
+      - service_name
+      - service_price
+      - start
+      - updated_at
+    MasterAppointmentHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        client_name:
+          type: string
+          readOnly: true
+        service_name:
+          type: string
+          readOnly: true
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        total_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        duration_minutes:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - client_name
+      - created_at
+      - duration_minutes
+      - end
+      - id
+      - service_name
+      - start
+      - total_price
+    MasterAppointmentList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        client_name:
+          type: string
+          readOnly: true
+        service_name:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        duration_minutes:
+          type: integer
+          readOnly: true
+        total_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        salon_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client_name
+      - created_at
+      - duration_minutes
+      - end
+      - id
+      - salon_name
+      - service_name
+      - start
+      - total_price
+    MasterList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        first_name:
+          type: string
+        last_name:
+          type: string
+        photo:
+          type: string
+          format: uri
+        average_rating:
+          type: number
+          format: double
+          readOnly: true
+        years_of_experience:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        salons:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalonShort'
+          readOnly: true
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+          readOnly: true
+      required:
+      - average_rating
+      - first_name
+      - id
+      - last_name
+      - photo
+      - salons
+      - services
+      - years_of_experience
+    MasterProfile:
+      type: object
+      description: Serializer for public and personal master profiles with nested
+        relations.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        years_of_experience:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        average_rating:
+          type: number
+          format: double
+          description: Calculate average rating, returning 0.0 if no reviews exist.
+          readOnly: true
+        total_reviews:
+          type: integer
+          description: Return total number of reviews received by the master.
+          readOnly: true
+        assigned_salons:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedSalons'
+          readOnly: true
+        active_services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+          readOnly: true
+        account_status:
+          allOf:
+          - $ref: '#/components/schemas/AccountStatusEnum'
+          readOnly: true
+        registration_date_master:
+          type: string
+          format: date-time
+          readOnly: true
+        last_update_master:
+          type: string
+          format: date-time
+          readOnly: true
+        working_schedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkingSchedule'
+          readOnly: true
+        photo:
+          type: string
+          format: uri
+      required:
+      - account_status
+      - active_services
+      - assigned_salons
+      - average_rating
+      - email
+      - first_name
+      - id
+      - last_name
+      - last_update_master
+      - phone
+      - photo
+      - registration_date_master
+      - total_reviews
+      - working_schedule
+      - years_of_experience
+    MasterReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        client_name:
+          type: string
+          readOnly: true
+        client_profile_photo:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comment:
+          type: string
+          nullable: true
+        service_name:
+          type: string
+          readOnly: true
+        appointment_date:
+          type: string
+          format: date
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - appointment_date
+      - client_name
+      - client_profile_photo
+      - created_at
+      - id
+      - rating
+      - service_name
+    MasterStatusUpdate:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        cancellation_reason:
+          type: string
+          nullable: true
+          maxLength: 255
+    PaginatedAppointmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Appointment'
+    PaginatedDayOffList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayOff'
+    PaginatedFavoriteMasterList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FavoriteMaster'
+    PaginatedMasterAppointmentHistoryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterAppointmentHistory'
+    PaginatedMasterAppointmentListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterAppointmentList'
+    PaginatedMasterListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterList'
+    PaginatedMasterReviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterReview'
+    PaginatedPaymentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+    PaginatedPromotionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Promotion'
+    PaginatedReferralEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReferralEvent'
+    PaginatedReviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+    PaginatedSalonList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Salon'
+    PaginatedSalonListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalonList'
+    PaginatedServicesList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Services'
+    PaginatedWorkingScheduleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkingSchedule'
+    PatchedAppointmentReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        appointment:
+          type: integer
+          readOnly: true
+        client:
+          type: integer
+          readOnly: true
+        master:
+          type: integer
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comment:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedDayOff:
+      type: object
+      description: Serializer for creating and validating a master's days off / vacations.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedMasterProfile:
+      type: object
+      description: Serializer for public and personal master profiles with nested
+        relations.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        years_of_experience:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        average_rating:
+          type: number
+          format: double
+          description: Calculate average rating, returning 0.0 if no reviews exist.
+          readOnly: true
+        total_reviews:
+          type: integer
+          description: Return total number of reviews received by the master.
+          readOnly: true
+        assigned_salons:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedSalons'
+          readOnly: true
+        active_services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+          readOnly: true
+        account_status:
+          allOf:
+          - $ref: '#/components/schemas/AccountStatusEnum'
+          readOnly: true
+        registration_date_master:
+          type: string
+          format: date-time
+          readOnly: true
+        last_update_master:
+          type: string
+          format: date-time
+          readOnly: true
+        working_schedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkingSchedule'
+          readOnly: true
+        photo:
+          type: string
+          format: uri
+    PatchedMasterStatusUpdate:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        cancellation_reason:
+          type: string
+          nullable: true
+          maxLength: 255
+    PatchedPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        appointment:
+          type: integer
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          maxLength: 3
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        payment_method_display:
+          type: string
+          readOnly: true
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        payment_status_display:
+          type: string
+          readOnly: true
+        payment_date:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedPromotion:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        discount_percent:
+          type: integer
+          maximum: 100
+          minimum: 0
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        salon:
+          type: integer
+    PatchedReferralEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        client:
+          type: integer
+          readOnly: true
+          nullable: true
+        session_id:
+          type: string
+          maxLength: 64
+        salon:
+          type: integer
+        service:
+          type: integer
+          nullable: true
+        source:
+          type: string
+          maxLength: 120
+        destination_url:
+          type: string
+          format: uri
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        event_type:
+          type: string
+          maxLength: 20
+    PatchedReschedule:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    PatchedSalon:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        city:
+          type: string
+          maxLength: 50
+        district:
+          type: string
+          nullable: true
+          maxLength: 50
+        address:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        opened_date:
+          type: string
+          format: date
+          nullable: true
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        owner:
+          type: integer
+          nullable: true
+        masters:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        description:
+          type: string
+          nullable: true
+        logo:
+          type: string
+          format: uri
+    PatchedUserProfile:
+      type: object
+      description: Serializer for retrieving detailed user profile information (Read-Only).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 128
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        is_master:
+          type: boolean
+          description: Check if user has an associated master profile.
+          readOnly: true
+        registration_date_user:
+          type: string
+          format: date-time
+          readOnly: true
+        last_update_user:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedWorkingSchedule:
+      type: object
+      description: Serializer for managing a master's working schedule by days of
+        the week.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        weekday:
+          allOf:
+          - $ref: '#/components/schemas/WorkingScheduleWeekdayEnum'
+          minimum: 0
+          maximum: 32767
+        start_time:
+          type: string
+          format: time
+          nullable: true
+        end_time:
+          type: string
+          format: time
+          nullable: true
+        is_working_day:
+          type: boolean
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        appointment:
+          type: integer
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          maxLength: 3
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        payment_method_display:
+          type: string
+          readOnly: true
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        payment_status_display:
+          type: string
+          readOnly: true
+        payment_date:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - appointment
+      - id
+      - payment_date
+      - payment_method
+      - payment_method_display
+      - payment_status_display
+    PaymentMethodEnum:
+      enum:
+      - cash
+      - card
+      - apple_pay
+      - google_pay
+      type: string
+      description: |-
+        * `cash` - Cash
+        * `card` - Card
+        * `apple_pay` - Apple Pay
+        * `google_pay` - Google Pay
+    PaymentStatusEnum:
+      enum:
+      - pending
+      - completed
+      - failed
+      - cancelled
+      - refunded
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `completed` - Completed
+        * `failed` - Failed
+        * `cancelled` - Cancelled
+        * `refunded` - Refunded
+    Promotion:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        discount_percent:
+          type: integer
+          maximum: 100
+          minimum: 0
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        salon:
+          type: integer
+      required:
+      - discount_percent
+      - end_date
+      - id
+      - name
+      - salon
+      - start_date
+    ReferralEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        client:
+          type: integer
+          readOnly: true
+          nullable: true
+        session_id:
+          type: string
+          maxLength: 64
+        salon:
+          type: integer
+        service:
+          type: integer
+          nullable: true
+        source:
+          type: string
+          maxLength: 120
+        destination_url:
+          type: string
+          format: uri
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        event_type:
+          type: string
+          maxLength: 20
+      required:
+      - client
+      - created_at
+      - destination_url
+      - event_type
+      - id
+      - salon
+      - session_id
+      - source
+    Reschedule:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+      required:
+      - end
+      - start
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        appointment:
+          type: integer
+        client:
+          type: integer
+          readOnly: true
+        master:
+          type: integer
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comment:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - appointment
+      - client
+      - created_at
+      - id
+      - master
+      - rating
+    Salon:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        city:
+          type: string
+          maxLength: 50
+        district:
+          type: string
+          nullable: true
+          maxLength: 50
+        address:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        opened_date:
+          type: string
+          format: date
+          nullable: true
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        owner:
+          type: integer
+          nullable: true
+        masters:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        description:
+          type: string
+          nullable: true
+        logo:
+          type: string
+          format: uri
+      required:
+      - address
+      - city
+      - id
+      - latitude
+      - logo
+      - longitude
+      - masters
+      - name
+    SalonList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+        logo:
+          type: string
+          format: uri
+        address:
+          type: string
+          maxLength: 150
+        city:
+          type: string
+          maxLength: 50
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        average_rating:
+          type: number
+          format: double
+          readOnly: true
+        total_reviews:
+          type: integer
+          readOnly: true
+        masters_count:
+          type: integer
+          readOnly: true
+        service_count:
+          type: integer
+          readOnly: true
+        working_hours:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkingSchedule'
+          readOnly: true
+        available_status:
+          type: string
+          maxLength: 20
+      required:
+      - address
+      - available_status
+      - average_rating
+      - city
+      - id
+      - logo
+      - masters_count
+      - name
+      - service_count
+      - total_reviews
+      - working_hours
+    SalonService:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+      required:
+      - id
+      - name
+    SalonShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+      required:
+      - id
+      - name
+    Service:
+      type: object
+      description: Nested serializer for services provided by a master.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+      required:
+      - id
+      - name
+    Services:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        category:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        duration_minutes:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        salons:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalonService'
+          readOnly: true
+        masters:
+          type: string
+          readOnly: true
+        image:
+          type: string
+          format: uri
+          nullable: true
+      required:
+      - category
+      - duration_minutes
+      - id
+      - masters
+      - name
+      - price
+      - salons
+    SetPassword:
+      type: object
+      description: Serializer for setting a new password (e.g., after a password reset).
+      properties:
+        new_password:
+          type: string
+          writeOnly: true
+      required:
+      - new_password
+    StatusEnum:
+      enum:
+      - pending
+      - confirmed
+      - in_progress
+      - completed
+      - cancelled
+      - no_show
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `confirmed` - Confirmed
+        * `in_progress` - In progress
+        * `completed` - Completed
+        * `cancelled` - Cancelled
+        * `no_show` - No show
+    TokenObtainPair:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - email
+      - password
+      - refresh
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          writeOnly: true
+      required:
+      - access
+      - refresh
+    TokenVerify:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+      required:
+      - token
+    User:
+      type: object
+      description: Serializer for creating and updating basic user data.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          maxLength: 128
+          minLength: 5
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 128
+      required:
+      - email
+      - first_name
+      - id
+      - is_active
+      - is_staff
+      - last_name
+      - password
+      - phone
+    UserProfile:
+      type: object
+      description: Serializer for retrieving detailed user profile information (Read-Only).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 128
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        is_master:
+          type: boolean
+          description: Check if user has an associated master profile.
+          readOnly: true
+        registration_date_user:
+          type: string
+          format: date-time
+          readOnly: true
+        last_update_user:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - date_joined
+      - email
+      - first_name
+      - id
+      - is_active
+      - is_master
+      - is_staff
+      - last_name
+      - last_update_user
+      - phone
+      - registration_date_user
+    VerifyEmail:
+      type: object
+      properties:
+        id:
+          type: string
+        token:
+          type: string
+      required:
+      - id
+      - token
+    WorkingSchedule:
+      type: object
+      properties:
+        weekday:
+          allOf:
+          - $ref: '#/components/schemas/WorkingScheduleWeekdayEnum'
+          minimum: 0
+          maximum: 32767
+        opening_time:
+          type: string
+          format: time
+          nullable: true
+        closing_time:
+          type: string
+          format: time
+          nullable: true
+        is_closed:
+          type: boolean
+      required:
+      - weekday
+    WorkingScheduleWeekdayEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      type: integer
+      description: |-
+        * `1` - Monday
+        * `2` - Tuesday
+        * `3` - Wednesday
+        * `4` - Thursday
+        * `5` - Friday
+        * `6` - Saturday
+        * `7` - Sunday
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
