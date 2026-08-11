@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import APIException
 from rest_framework import status as http_status
+from rest_framework.permissions import AllowAny
 
 from users.permissions import IsMaster
 from .models import Appointment
@@ -26,8 +27,18 @@ from .serializers import (
     MasterStatusUpdateSerializer,
     MasterAppointmentListSerializer,
     MasterAppointmentDetailSerializer,
-    MasterAppointmentHistorySerializer
+    MasterAppointmentHistorySerializer,
+    AvailableSlotSerializer,
+    AvailableSlotsQuerySerializer
 )
+from appointments.services.availability import (
+    InvalidDateError,
+    MasterNotFoundError,
+    ServiceNotAssignedError,
+    ServiceNotFoundError,
+    SlotService,
+)
+
 from .filters import (
     MasterAppointmentFilter,
     MasterAppointmentHistoryFilter
@@ -297,7 +308,7 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
 
         if new_status not in allowed_next_statuses:
             raise StatusTransitionConflict(
-                "Неможливо перевести бронювання зі статусу '%s' у статус '%s'."
+                "Неможливо перевести бронювання зі статусом '%s' у статус '%s'."
                 % (current_status, new_status)
             )
 
@@ -430,3 +441,43 @@ class MasterAppointmentHistoryView(generics.ListAPIView):
                 )
 
         return super().filter_queryset(queryset)
+
+
+class AvailableTimeSlotsView(APIView):
+    """
+    GET /api/appointments/available-slots/?master_id=1&service_id=2&date=2026-08-15
+    """
+
+    permission_classes = [AllowAny]
+
+    # noinspection PyMethodMayBeStatic
+    def get(self, request) -> Response:
+        query = AvailableSlotsQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        params = query.validated_data
+
+        slot_service = SlotService(
+            master_id=params["master_id"],
+            service_id=params["service_id"],
+            target_date=params["date"],
+        )
+
+        try:
+            slots = slot_service.generate()
+        except MasterNotFoundError:
+            return Response({"detail": "Master not found."}, status=http_status.HTTP_404_NOT_FOUND)
+        except ServiceNotFoundError:
+            return Response({"detail": "Service not found."}, status=http_status.HTTP_404_NOT_FOUND)
+        except ServiceNotAssignedError:
+            return Response(
+                {"detail": "The selected service is not assigned to this master."},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+        except InvalidDateError:
+            return Response(
+                {"detail": "Appointment date cannot be in the past."},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = AvailableSlotSerializer(slots, many=True)
+        return Response(result.data, status=http_status.HTTP_200_OK)

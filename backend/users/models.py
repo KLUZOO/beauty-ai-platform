@@ -369,3 +369,32 @@ class MasterService(models.Model):
 
     def __str__(self) -> str:
         return f"{self.master} - {self.service}"
+
+
+class MasterBreak(models.Model):
+    """Represents a master's recurring break period within a working day."""
+
+    master = models.ForeignKey(
+        Master,
+        on_delete=models.CASCADE,
+        related_name="breaks",
+    )
+    weekday = models.PositiveSmallIntegerField(choices=WeekDay.choices)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    def clean(self) -> None:
+        super().clean()
+        if self.start_time >= self.end_time:
+            raise ValidationError(
+                {
+                    "start_time": ["Start time must be earlier than end time."],
+                    "end_time": ["End time must be later than start time."],
+                }
+            )
+
+    class Meta:
+        ordering = ("weekday", "start_time")
+
+    def __str__(self) -> str:
+        return f"{self.master} break {self.get_weekday_display()} {self.start_time}-{self.end_time}"

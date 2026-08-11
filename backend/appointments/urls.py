@@ -9,6 +9,7 @@ from .views import (
     MasterAppointmentListView,
     MasterAppointmentDetailView,
     MasterAppointmentHistoryView,
+    AvailableTimeSlotsView,
 )
 
 urlpatterns = [
@@ -22,7 +23,10 @@ urlpatterns = [
         "<int:pk>/cancel/", CancelAppointmentView.as_view(), name="appointment-cancel"
     ),
     path(
-        "available-slots/", AvailableSlotsView.as_view(), name="available-slots"
+        "available-slots/by-salon/", AvailableSlotsView.as_view(), name="available-slots-by-salon"
+    ),
+    path(
+        "available-slots/by-master/", AvailableTimeSlotsView.as_view(), name="available-slots-by-master"
     ),
     path(
         "<int:pk>/status/", MasterUpdateAppointmentStatusView.as_view(), name="appointment-status-update"
