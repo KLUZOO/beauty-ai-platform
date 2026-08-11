@@ -1,3 +1,4 @@
+from django.db.models import QuerySet
 from rest_framework import viewsets
 
 from payments.models import Payment
@@ -9,7 +10,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = (IsAdminOrAuthenticatedReadOnly,)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         queryset = Payment.objects.select_related("appointment")
 
         if self.request.user.is_staff:

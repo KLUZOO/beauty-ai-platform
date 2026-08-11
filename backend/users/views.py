@@ -1,7 +1,20 @@
+from django.contrib.auth.base_user import AbstractBaseUser
+from django.http import HttpResponse
+
 from beauty_service.models import Service
-from django.db.models import Avg, Count, F, Prefetch, Q, Value
+from django.db.models import (
+    Avg,
+    Count,
+    F,
+    Prefetch,
+    Q,
+    Value, QuerySet
+)
 from django.db.models.functions import Concat
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import (
+    get_object_or_404,
+    render
+)
 from django.views import View
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -10,16 +23,33 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
-from rest_framework import generics, serializers, status, viewsets
+from rest_framework import (
+    generics,
+    serializers,
+    status,
+    viewsets
+)
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from salons.models import Salon, SalonStatus
+from salons.models import (
+    Salon,
+    SalonStatus
+)
 
-from users.models import DayOff, FavoriteMaster, Master, MasterStatus, WorkingSchedule
+from users.models import (
+    DayOff,
+    FavoriteMaster,
+    Master,
+    MasterStatus,
+    WorkingSchedule
+)
 from users.permissions import IsMaster
 from users.serializers import (
     ChangePasswordSerializer,
@@ -93,7 +123,7 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = (IsAuthenticated,)
 
-    def get_object(self):
+    def get_object(self) -> AbstractBaseUser:
         return self.request.user
 
 
@@ -136,7 +166,7 @@ class ManageMasterView(generics.RetrieveUpdateAPIView):
     serializer_class = MasterProfileSerializer
     permission_classes = (IsMaster,)
 
-    def get_object(self):
+    def get_object(self) -> str:
         return self.request.user.master
 
 
@@ -166,7 +196,7 @@ class MasterListView(generics.ListAPIView):
 
     ordering = ("-rating",)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         return (
             Master.objects.filter(
                 account_status=MasterStatus.ACTIVE,
@@ -227,12 +257,12 @@ class WorkingScheduleListCreateView(generics.ListCreateAPIView):
     serializer_class = WorkingScheduleSerializer
     permission_classes = (IsMaster,)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[WorkingSchedule]:
         return WorkingSchedule.objects.filter(master=self.request.user.master).order_by(
             "weekday", "start_time"
         )
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer) -> None:
         serializer.save(master=self.request.user.master)
 
 
@@ -290,12 +320,12 @@ class DayOffViewSet(viewsets.ModelViewSet):
     serializer_class = DayOffSerializer
     permission_classes = (IsMaster,)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[DayOff]:
         return DayOff.objects.filter(master=self.request.user.master).order_by(
             "start_date"
         )
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer) -> None:
         serializer.save(master=self.request.user.master)
 
 
@@ -338,7 +368,7 @@ class ManageWorkingScheduleView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = WorkingScheduleSerializer
     permission_classes = (IsMaster,)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[WorkingSchedule, WorkingSchedule]:
         return WorkingSchedule.objects.filter(master=self.request.user.master)
 
 
@@ -357,7 +387,7 @@ class ChangePasswordView(generics.GenericAPIView):
             ),
         },
     )
-    def post(self, request, *args, **kwargs):
+    def post(self, request) -> Response:
         if not request.user.has_usable_password():
             raise ValidationError(
                 {"detail": "Password has not been set. Use the set-password endpoint."}
@@ -385,7 +415,7 @@ class SetPasswordView(generics.GenericAPIView):
             ),
         },
     )
-    def post(self, request, *args, **kwargs):
+    def post(self, request) -> Response:
         if request.user.has_usable_password():
             raise ValidationError(
                 {
@@ -417,7 +447,7 @@ class VerifyEmailView(APIView):
             400: OpenApiResponse(description="Invalid token or user ID."),
         },
     )
-    def post(self, request):
+    def post(self, request) -> Response:
         serializer = VerifyEmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -447,7 +477,7 @@ class GoogleLoginView(APIView):
             400: OpenApiResponse(description="Invalid Google token."),
         },
     )
-    def post(self, request):
+    def post(self, request) -> Response:
         serializer = GoogleLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -467,7 +497,8 @@ class GoogleLoginView(APIView):
 
 
 class GoogleTestView(View):
-    def get(self, request):
+    # noinspection PyMethodMayBeStatic
+    def get(self, request) -> HttpResponse:
         return render(request, "test-google/test-google.html")
 
 
@@ -490,10 +521,10 @@ class FavoriteMastersListView(generics.ListAPIView):
         },
         tags=["Favorite Masters"],
     )
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs) -> Response:
         return super().get(request, *args, **kwargs)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         return (
             Master.objects.filter(
                 favorite_relations__client=self.request.user,
@@ -553,7 +584,7 @@ class FavoriteMasterView(APIView):
         },
         tags=["Favorite Masters"],
     )
-    def post(self, request, master_id):
+    def post(self, request, master_id) -> Response:
         master = get_object_or_404(
             Master.objects.filter(
                 account_status=MasterStatus.ACTIVE,
@@ -630,7 +661,7 @@ class FavoriteMasterView(APIView):
         },
         tags=["Favorite Masters"],
     )
-    def delete(self, request, master_id):
+    def delete(self, request, master_id) -> Response:
         favorite = get_object_or_404(
             FavoriteMaster,
             client=request.user,
@@ -672,7 +703,7 @@ class FavoriteMasterView(APIView):
         },
         tags=["Favorite Masters"],
     )
-    def get(self, request, master_id):
+    def get(self, request, master_id) -> Response:
         is_favorite = FavoriteMaster.objects.filter(
             client=request.user,
             master_id=master_id,

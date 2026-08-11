@@ -188,3 +188,17 @@ class AvailableSlotSerializer(serializers.Serializer):
     start_time = serializers.DateTimeField()
     end_time = serializers.DateTimeField()
     availability_status = serializers.CharField()
+
+
+class CreateAppointmentSerializer(serializers.Serializer):
+    master_id = serializers.IntegerField(min_value=1)
+    service_id = serializers.IntegerField(min_value=1)
+    appointment_date = serializers.DateField()
+    appointment_time = serializers.TimeField()
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    # noinspection PyMethodMayBeStatic
+    def validate_appointment_date(self, value) -> str:
+        if value < timezone.localdate():
+            raise serializers.ValidationError("Неможливо створити запис на минулу дату.")
+        return value

@@ -1,8 +1,12 @@
-from typing import Any
+from typing import Sequence
 
-from django.db.models import Avg, Count, Q, QuerySet
+from django.db.models import (
+    Avg,
+    Count,
+    Q,
+    QuerySet
+)
 from drf_spectacular.utils import (
-    OpenApiExample,
     OpenApiParameter,
     OpenApiResponse,
     extend_schema,
@@ -122,7 +126,7 @@ class SalonOrderingFilter(OrderingFilter):
         "popularity": "completed_services",
     }
 
-    def get_ordering(self, request, queryset, view) -> list[Any]:
+    def get_ordering(self, request, queryset, view) -> Sequence[str] | None:
         ordering = super().get_ordering(request, queryset, view)
 
         if not ordering:

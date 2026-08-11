@@ -1,4 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import (
+    datetime,
+    timedelta
+)
 
 from beauty_service.models import Service
 from django.db.models import QuerySet
@@ -11,14 +14,22 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     extend_schema,
 )
-from rest_framework import filters, generics, serializers
+from rest_framework import (
+    filters,
+    generics,
+    serializers
+)
 from rest_framework import status as http_status
 from rest_framework.exceptions import APIException
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from salons.models import Salon
 from tasks.notification import send_email_task
+from users.models import Master
 from users.permissions import IsMaster
 
 from appointments.services.availability import (
@@ -40,6 +51,7 @@ from .serializers import (
     MasterAppointmentListSerializer,
     MasterStatusUpdateSerializer,
     RescheduleSerializer,
+    CreateAppointmentSerializer,
 )
 
 
@@ -741,3 +753,122 @@ class AvailableTimeSlotsView(APIView):
 
         result = AvailableSlotSerializer(slots, many=True)
         return Response(result.data, status=http_status.HTTP_200_OK)
+
+
+class CreateAppointmentView(generics.CreateAPIView):
+    """
+    POST /api/appointments/
+    Створення нового запису клієнтом (BE-BOOKING-02 / BE-CLIENT-08).
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = CreateAppointmentSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        # Getting the wizard and service (404 if not found)
+        try:
+            master = Master.objects.get(pk=data["master_id"])
+        except Master.DoesNotExist:
+            return Response({"detail": "Майстра не знайдено."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        try:
+            service = Service.objects.get(pk=data["service_id"], is_active=True)
+        except Service.DoesNotExist:
+            return Response({"detail": "Послугу не знайдено."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        # Calculating start and end datetimes
+        tz = timezone.get_current_timezone()
+        start_dt = timezone.make_aware(
+            datetime.combine(data["appointment_date"], data["appointment_time"]),
+            tz
+        )
+        end_dt = start_dt + timedelta(minutes=service.duration_minutes)
+
+        # Check: Future tense
+        if start_dt <= timezone.now():
+            return Response(
+                {"detail": "Час запису повинен бути у майбутньому."},
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
+
+        # Checking available slots via SlotService (working hours, weekends, breaks)
+        slot_service = SlotService(
+            master_id=master.id,
+            service_id=service.id,
+            target_date=data["appointment_date"]
+        )
+        try:
+            available_slots = slot_service.generate()
+        except ServiceNotAssignedError:
+            return Response(
+                {"detail": "Обрана послуга не надається цим майстром."},
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
+        except (MasterNotFoundError, ServiceNotFoundError, InvalidDateError) as e:
+            return Response({"detail": str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
+
+        # Check if the selected time slot is in the list of available ones
+        req_start_str = data["appointment_time"].strftime("%H:%M")
+        is_slot_available = any(s["start"] == req_start_str for s in available_slots)
+
+        if not is_slot_available:
+            return Response(
+                {"detail": "Обраний час недоступний (поза робочим графіком, вихідний або перерва)."},
+                status=http_status.HTTP_400_BAD_REQUEST
+            )
+
+        # Conflict prevention (Double-booking check) -> 409 Conflict
+        has_conflict = Appointment.objects.filter(
+            master=master,
+            start__lt=end_dt,
+            end__gt=start_dt
+        ).exclude(status__in=["cancelled", "no_show"]).exists()
+
+        if has_conflict:
+            return Response(
+                {"detail": "Обраний слот вже зайнятий іншим бронюванням."},
+                status=http_status.HTTP_409_CONFLICT
+            )
+
+        # Creating a record (Client ID is taken from request.user)
+        appointment = Appointment.objects.create(
+            client=request.user,
+            master=master,
+            salon=master.salon,
+            service=service,
+            start=start_dt,
+            end=end_dt,
+            notes=data.get("notes", ""),
+            status="pending"
+        )
+
+        # Notifications (Email to client and master)
+        send_email_task.delay(
+            recipient=request.user.email,
+            subject="Підтвердження бронювання",
+            context={
+                "customer_name": request.user.get_full_name() or request.user.email,
+                "salon_name": appointment.salon.name,
+                "service_name": service.name,
+                "booking_date": data["appointment_date"].isoformat(),
+                "booking_time": req_start_str,
+            }
+        )
+        if master.user and master.user.email:
+            send_email_task.delay(
+                recipient=master.user.email,
+                subject="Нове бронювання",
+                context={
+                    "master_name": master.user.get_full_name() or master.user.email,
+                    "customer_name": request.user.get_full_name() or request.user.email,
+                    "service_name": service.name,
+                    "booking_date": data["appointment_date"].isoformat(),
+                    "booking_time": req_start_str,
+                }
+            )
+
+        response_serializer = AppointmentSerializer(appointment)
+        return Response(response_serializer.data, status=http_status.HTTP_201_CREATED)
