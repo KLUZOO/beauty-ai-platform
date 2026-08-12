@@ -1,4 +1,4 @@
-@use '../../../mixins.scss' as *;
+@import '../../../mixins.scss';
 
 .favorites {
   padding: 32px;
@@ -11,6 +11,7 @@
   @include on-phone {
     padding: 16px;
   }
+}
 
   &__title {
     font-size: 48px;

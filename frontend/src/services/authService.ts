@@ -201,21 +201,35 @@ export const verifyEmail = async (uidb64: string, token: string) => {
   const response = await fetch(`${API_BASE_URL}/users/verify-email/`, {
     method: 'POST',
     headers: {
+      Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ uidb64, token }),
+    body: JSON.stringify({
+      id: uidb64,
+      token,
+    }),
   });
 
+  const responseText = await response.text();
+
+  let data: any = {};
+
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    data = {};
+  }
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
     throw new Error(
-      errorData?.detail ||
-        errorData?.message ||
-        `Email verification failed with status ${response.status}`,
+      data?.message ||
+        data?.detail ||
+        data?.error ||
+        `${response.status} ${response.statusText}`,
     );
   }
 
-  return response.json().catch(() => null);
+  return data;
 };
 
 export const registerUser = async (payload: ExtendedRegisterPayload) => {

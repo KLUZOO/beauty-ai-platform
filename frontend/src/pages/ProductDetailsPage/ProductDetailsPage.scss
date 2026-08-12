@@ -1,4 +1,4 @@
-@use '../../mixins.scss' as *;
+@import '../../mixins.scss';
 @import 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap';
 
 :root {
@@ -51,15 +51,12 @@
     }
   }
 
-  &__id {
-    font-size: 14px;
-    color: #75767f;
-  }
-
   &__main {
     display: flex;
     gap: 32px;
     margin-bottom: 48px;
+    flex-wrap: wrap;
+    min-width: 0;
 
     @include on-phone {
       flex-direction: column;
@@ -71,6 +68,13 @@
     display: flex;
     flex-direction: row-reverse;
     gap: 16px;
+    min-width: 0;
+    width: 100%;
+
+    @include on-tablet {
+      flex-direction: column;
+      width: 100%;
+    }
 
     @include on-phone {
       flex-direction: column;
@@ -87,12 +91,13 @@
 
     @include on-phone {
       max-width: 100%;
+      margin-bottom: 24px;
     }
-  }
 
-  &__colors,
-  &__capacities {
-    margin-bottom: 24px;
+    @include on-tablet {
+      max-width: 100%;
+      margin-bottom: 24px;
+    }
   }
 
   &__label {
@@ -213,16 +218,16 @@
   flex-direction: row-reverse;
   gap: 16px;
 
-  @include padding-inline-category;
-
   &__thumbnails {
     display: flex;
     flex-direction: column;
     max-height: 464px;
     scrollbar-color: var(--primary-color) var(--card-bg);
     gap: 12px;
+  }
 
-    @include on-phone {
+  @media (max-width: 639px) {
+    .gallery__thumbnails {
       flex-direction: row wrap;
       overflow-x: hidden;
       width: 100%;
@@ -239,15 +244,16 @@
       object-fit: contain;
       border-radius: 12px;
       transition: opacity 0.3s ease;
+    }
+  }
 
-      @include on-desktop {
-        width: 464px;
-        height: 464px;
-      }
+  @media (min-width: 1200px) {
+    .gallery__main-image img {
+      width: 464px;
+      height: 464px;
     }
   }
 }
-
 .thumbnail {
   width: 64px;
   height: 64px;
@@ -267,13 +273,14 @@
   &:hover {
     border-color: var(--primary-color);
   }
+}
 
-  @include on-phone {
+@media (max-width: 639px) {
+  .thumbnail {
     width: 56px;
     height: 56px;
   }
 }
-
 .color-options {
   display: flex;
   gap: 12px;
@@ -402,21 +409,28 @@
   }
 
   &__grid {
+    display: grid;
     position: relative;
     width: 100%;
     grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
     gap: 16px;
+  }
 
-    @include on-phone {
+  @media (max-width: 639px) {
+    .related-products__grid {
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 12px;
     }
+  }
 
-    @include on-tablet {
+  @media (min-width: 640px) and (max-width: 1199px) {
+    .related-products__grid {
       grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
     }
+  }
 
-    @include on-desktop {
+  @media (min-width: 1200px) {
+    .related-products__grid {
       grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
     }
   }
@@ -443,37 +457,6 @@
       box-shadow 0.3s ease;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 
-    @include on-tablet {
-      padding: 20px;
-      max-width: 272px;
-    }
-
-    @include on-desktop {
-      max-width: 272px;
-    }
-
-    &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    }
-  }
-
-  &__card-title,
-  &__card-prices,
-  &__card-specs,
-  &__card-actions {
-    flex-shrink: 0;
-  }
-
-  &__card-image {
-    width: 100%;
-    height: 180px;
-    object-fit: contain;
-    margin-bottom: 15px;
-  }
-
-  &__card-title {
-    font-size: 16px;
     font-weight: 500;
     margin-bottom: 10px;
     color: var(--text-color);

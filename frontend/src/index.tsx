@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import { createRoot } from 'react-dom/client';
-import { Route, HashRouter as Router, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { App } from './App';
 /* import { CartProvider } from './Functional/CartContext/CartContext'; */
@@ -20,9 +20,13 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage/VerifyEmailPage';
 const GOOGLE_CLIENT_ID =
   '136485800268-6lrfcd7uh3g14jhaspul8k2n8rpnm8o6.apps.googleusercontent.com';
 
+const baseName = window.location.pathname.startsWith('/beauty.ai')
+  ? '/beauty.ai'
+  : '/';
+
 const Root = () => (
   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-    <Router>
+    <Router basename={baseName}>
       {/* <CartProvider> */}
       <Routes>
         <Route path="/" element={<App />}>
@@ -30,9 +34,10 @@ const Root = () => (
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route
-            path="verify-email/:uidb64/:token"
+            path="verify-email"
             element={<VerifyEmailPage />}
           />
+          <Route path="*" element={<HomePage />} />
           {/* <Route path="menu" element={<Aside />} /> */}
           {/* <Route path="phones" element={<PhonePage />} /> */}
           {/* <Route path="tablets" element={<TabletPage />} /> */}

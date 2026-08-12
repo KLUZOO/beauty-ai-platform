@@ -1,3 +1,5 @@
+@import './mixins.scss';
+
 html {
   overflow-x: hidden;
 }
@@ -16,9 +18,22 @@ body {
   overflow-x: hidden;
 }
 
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
 .root {
   display: flex;
-  
+
   flex-direction: column;
   min-height: 100vh;
   overflow-x: hidden;
@@ -30,6 +45,14 @@ body {
   max-width: none;
   margin: 0;
   padding: 0 24px;
+
+  @include on-tablet {
+    padding: 0 20px;
+  }
+
+  @include on-phone {
+    padding: 0 16px;
+  }
 }
 
 .visually-hidden {

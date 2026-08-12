@@ -1,4 +1,4 @@
-@import '../../mixins';
+@import '../../mixins.scss';
 
 .menu {
   position: fixed;
@@ -6,10 +6,12 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #0F1121;
+  background-color: #0f1121;
   box-sizing: border-box;
   opacity: 0;
-  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  transition:
+    transform 0.3s ease-in-out,
+    opacity 0.3s ease-in-out;
   z-index: 2;
   transform: translateX(-100%);
   pointer-events: none;
@@ -42,14 +44,14 @@
     width: 100%;
     margin-bottom: 32px;
     border: none;
-    border-bottom: 1px solid #3B3E4A;
+    border-bottom: 1px solid #3b3e4a;
   }
 
   &__close-wrapper {
     height: 50px;
     display: flex;
     align-items: center;
-    border-left: 1px solid #3B3E4A;
+    border-left: 1px solid #3b3e4a;
     padding-left: 30px;
   }
 
@@ -70,7 +72,6 @@
     padding: 0;
     margin-right: 30px;
   }
-
 
   &__logo {
     padding: 10px;
@@ -97,17 +98,23 @@
     position: absolute;
     bottom: 0;
     left: 0;
+    gap: 16px;
+    padding: 24px;
+    box-sizing: border-box;
   }
 
   &__heart,
   &__packet {
-    border: 1px solid #3B3E4A;
+    border: 1px solid #3b3e4a;
     cursor: pointer;
-    padding: 20px 100px;
+    padding: 20px 32px;
+    width: 100%;
+    max-width: 180px;
+    display: flex;
+    justify-content: center;
   }
 
   &__heart {
-
     &__top {
       display: flex;
       width: 24px;
@@ -119,7 +126,6 @@
   }
 
   &__packet {
-
     &__top {
       display: flex;
       width: 24px;
@@ -132,7 +138,7 @@
 }
 
 .nav__link--phone {
-  color: #75767F;
+  color: #75767f;
   margin: 16px 0;
   cursor: pointer;
   text-align: center;
@@ -146,7 +152,7 @@
   transition: color 0.3s ease-in-out;
 
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     left: 0;
     bottom: 0;
