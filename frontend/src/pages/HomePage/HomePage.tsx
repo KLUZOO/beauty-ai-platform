@@ -297,10 +297,9 @@ export const HomePage = () => {
                     handleSearch();
                   }
                 }}
-                placeholder="Пошук салонів, спеціалістів або послуг"
+                placeholder="Пошук"
               />
             </label>
-            <div className="hero__search-location-selector"></div>
             <button
               type="button"
               className="hero__search-button"
@@ -441,28 +440,6 @@ export const HomePage = () => {
 
         <div>
           <main className="home-page__results">
-            <div className="home-page__results-header">
-              <div>
-                <p className="home-page__results-count">
-                  Знайдено {filteredResults.length} результатів
-                </p>
-                <p className="home-page__results-subtitle">
-                  Сортування: Рекомендовані
-                </p>
-              </div>
-              <div className="home-page__tab-list">
-                <button
-                  type="button"
-                  className="home-page__tab home-page__tab--active"
-                >
-                  Всі результати
-                </button>
-                <button type="button" className="home-page__tab">
-                  AI Рекомендації
-                </button>
-              </div>
-            </div>
-
             <div className="home-page__cards-grid">
               {filteredResults.map(item => (
                 <article key={item.title} className="home-page__result-card">

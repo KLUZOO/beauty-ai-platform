@@ -1,10 +1,8 @@
 /* stylelint-disable */
-
-@use '../../mixins.scss' as *;
+@import '../../mixins.scss';
 
 .section {
   position: relative;
-  @include padding-inline-category;
 
   &__text {
     color: #f1f2f9;
@@ -43,21 +41,6 @@
   @include on-desktop {
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
-  }
-
-  &__card {
-    position: relative;
-    background-color: #161827;
-    border: 1px solid #3b3e4a;
-    border-radius: 0;
-    padding: 32px;
-    text-align: left;
-    transition: box-shadow 0.3s ease;
-    box-sizing: border-box;
-
-    &:hover {
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-    }
   }
 
   &__card-image {

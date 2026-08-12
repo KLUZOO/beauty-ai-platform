@@ -1,4 +1,4 @@
-@use '../../../mixins.scss' as *;
+@import '../../../mixins.scss';
 
 .cart {
   max-width: 1200px;
@@ -47,10 +47,21 @@
     grid-template-columns: 32px 80px 1fr auto;
     gap: 16px;
     align-items: center;
-
-    @include card-box;
-
+    background-color: #1b1b2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    box-shadow: 0 16px 40px rgba(82, 46, 178, 0.12);
     padding: 16px;
+
+    @include on-tablet {
+      grid-template-columns: 80px 1fr auto;
+    }
+
+    @include on-phone {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
   }
 
   &__item-remove-icon {
@@ -154,34 +165,30 @@
     display: grid;
     grid-template-columns: 1fr 280px;
     gap: 32px;
+    width: 100%;
+  }
 
-    @include on-tablet {
-      grid-template-columns: 1fr;
-      gap: 24px;
-    }
-
-    @include on-phone {
+  @media (max-width: 1199px) {
+    .cart__content {
       grid-template-columns: 1fr;
       gap: 24px;
     }
   }
 
   &__summary {
-    @include card-box;
-
+    background-color: #1b1b2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    box-shadow: 0 16px 40px rgba(82, 46, 178, 0.12);
     padding: 24px;
     display: flex;
     flex-direction: column;
     gap: 16px;
     height: fit-content;
+  }
 
-    @include on-tablet {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    @include on-phone {
+  @media (min-width: 640px) and (max-width: 1199px) {
+    .cart__summary {
       flex-direction: row;
       align-items: center;
       justify-content: space-between;

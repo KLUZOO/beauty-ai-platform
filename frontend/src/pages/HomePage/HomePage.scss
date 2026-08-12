@@ -1,24 +1,37 @@
-@use '../../mixins.scss' as *;
+@import '../../mixins.scss';
 
 .home-page {
-  padding: 16px 14px 32px;
+  padding: 32px 24px 48px;
   background: linear-gradient(180deg, #fbf6ff 0%, #f4effd 100%);
+
+  @include on-tablet {
+    padding: 40px 28px 56px;
+  }
+
+  @include on-desktop {
+    padding: 48px 32px 72px;
+  }
 }
 
 .hero {
+  width: 100%;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
   align-items: center;
   background: linear-gradient(135deg, #f7edff 0%, #ffffff 100%);
   border-radius: 24px;
-  padding: 24px;
+  padding: 32px;
   box-shadow: 0 16px 50px rgba(82, 46, 178, 0.1);
+
+  @include on-desktop {
+    padding: 40px 48px;
+  }
 }
 
 .hero__content {
   width: 100%;
-  max-width: none;
   margin: 0;
 }
 
@@ -54,6 +67,8 @@
 }
 
 .hero__search {
+  width: 100%;
+  max-width: 1200px;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) auto auto;
   gap: 12px;
@@ -61,25 +76,27 @@
   margin: 20px 0 8px;
   padding: 6px;
   background: rgba(255, 255, 255, 0.92);
-  border-radius: 999px;
+  border-radius: 900px;
   box-shadow: 0 16px 40px rgba(82, 46, 178, 0.1);
-  width: 1500px;
+  min-width: 0;
   justify-self: center;
-}
 
-.hero__search-input-field {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 50px;
-  padding: 12px 16px;
-  background: white;
-  border: 1px solid rgba(120, 99, 255, 0.18);
-  border-radius: 999px;
+  @include on-desktop {
+    grid-template-columns: minmax(0, 1.4fr) auto auto;
+  }
+
+  @include on-tablet {
+    grid-template-columns: 1fr;
+  }
+
+  @include on-phone {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 
 .hero__search-input-field input {
-  width: 100%;
+  max-width: 500px;
   border: none;
   outline: none;
   font-size: 15px;
@@ -89,6 +106,25 @@
 
 .hero__search-input-field input::placeholder {
   color: #7c6f9d;
+  max-width: 500px;
+}
+
+.hero__search-button,
+.hero__search-location,
+.hero__search-input-field {
+  @include on-tablet {
+    max-width: 500px;
+  }
+
+  @include on-phone {
+    max-width: 500px;
+  }
+}
+
+.hero__search-location {
+  @include on-phone {
+    justify-content: center;
+  }
 }
 
 .hero__search-icon {
@@ -131,11 +167,31 @@
 
 .home-page__search-section {
   display: grid;
-  grid-template-columns: 300px 1fr 320px;
-  gap: 20px;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(
+      280px,
+      360px
+    );
+  gap: 24px;
   align-items: start;
   width: 100%;
-  margin-top: 20px;
+  margin: 32px auto 0;
+
+  @include on-desktop {
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(
+        300px,
+        380px
+      );
+  }
+
+  @include on-tablet {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  @include on-phone {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 .home-page__sidebar,
@@ -145,6 +201,15 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+}
+
+.home-page__sidebar {
+  min-width: 280px;
+}
+
+.home-page__map {
+  min-width: 260px;
+  max-width: 380px;
 }
 
 .home-page__results {
@@ -583,9 +648,15 @@
 }
 
 .home-page__map-card-canvas {
-  height: 890px;
+  height: min(890px, 60vh);
   overflow: hidden;
   border-radius: 16px;
+}
+
+@media (max-width: 639px) {
+  .home-page__map-card-canvas {
+    height: 420px;
+  }
 }
 
 .leaflet-container {
@@ -606,6 +677,45 @@
   margin: 0 auto;
 
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  flex-wrap: wrap;
+}
+
+.search-input,
+.search-location,
+.search-date {
+  min-width: 0;
+}
+
+@media (min-width: 640px) and (max-width: 1199px) {
+  .search-section,
+  .home-page__search {
+    width: 100%;
+  }
+
+  .search-input,
+  .search-location,
+  .search-date,
+  .search-btn {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .search-section {
+    gap: 10px;
+  }
+
+  .search-input,
+  .search-location,
+  .search-date,
+  .search-btn {
+    width: 100%;
+  }
+
+  .search-btn {
+    padding: 14px 18px;
+  }
 }
 
 .search-input,
@@ -632,7 +742,7 @@
 
 .search-input {
   flex: 1;
-  min-width: 350px;
+  min-width: 0;
   border-radius: 999px;
 }
 
