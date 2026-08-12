@@ -2,105 +2,211 @@
 
 .footer {
   margin-top: 81px;
-  background-color: #ffffff;
   padding: 24px 40px;
+
+  background-color: #ffffff;
   color: #1f1734;
 
+  @include on-phone {
+    margin-top: 48px;
+    padding: 24px 16px;
+  }
+
+  @include on-tablet {
+    margin-top: 64px;
+    padding: 24px 28px;
+  }
+
+  @include on-desktop {
+    margin-top: 81px;
+    padding: 24px 40px;
+  }
+
   &__container {
+    width: 100%;
+    max-width: 1200px;
+
+    margin: 0 auto;
+
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+
     gap: 24px;
+
+    @include on-phone {
+      align-items: center;
+      gap: 24px;
+    }
 
     @include on-tablet {
       flex-direction: row;
       justify-content: space-between;
       align-items: center;
-      max-width: 1200px;
-      margin: 0 auto;
-      width: 100%;
+
+      gap: 24px;
     }
 
     @include on-desktop {
       flex-direction: row;
       justify-content: space-between;
       align-items: center;
-      max-width: 1200px;
-      margin: 0 auto;
-      width: 100%;
+
+      gap: 24px;
     }
   }
 
-  &__img img {
-    width: 89px;
-    height: 32px;
+  &__img {
+    display: flex;
+    align-items: center;
+
+    @include on-phone {
+      justify-content: center;
+      width: 100%;
+    }
+
+    img {
+      display: block;
+
+      width: 89px;
+      height: 32px;
+
+      object-fit: contain;
+
+      @include on-phone {
+        width: 89px;
+        height: 32px;
+      }
+
+      @include on-tablet {
+        width: 89px;
+        height: 32px;
+      }
+
+      @include on-desktop {
+        width: 89px;
+        height: 32px;
+      }
+    }
   }
 
   &__links {
     display: flex;
     flex-direction: column;
+
     gap: 12px;
+
+    @include on-phone {
+      width: 100%;
+
+      align-items: center;
+      justify-content: center;
+
+      gap: 12px;
+    }
 
     @include on-tablet {
       flex-direction: row;
+      align-items: center;
+
       gap: 32px;
     }
 
     @include on-desktop {
       flex-direction: row;
+      align-items: center;
+
       gap: 32px;
     }
   }
 
   &__link {
-    color: rgb(255, 255, 255);
+    color: #5e4896;
+
     text-decoration: none;
+
     font-size: 12px;
     font-weight: 700;
+
     text-transform: uppercase;
-    transition: color 0.3s;
+
+    transition:
+      color 0.3s ease,
+      transform 0.3s ease;
 
     &:hover {
-      color: rgb(0, 0, 0);
+      color: #967eff;
+      transform: translateY(-1px);
+    }
+
+    @include on-phone {
+      font-size: 12px;
+    }
+
+    @include on-tablet {
+      font-size: 12px;
+    }
+
+    @include on-desktop {
+      font-size: 12px;
     }
   }
 
   &__up-link {
     display: flex;
     align-items: center;
+
     gap: 8px;
+
+    padding: 0;
+
     color: #000000;
+
     font-size: 12px;
+    font-weight: 700;
+
     background: none;
     border: none;
+
     cursor: pointer;
-    transition: color 0.3s;
-    padding: 0;
+
+    transition:
+      color 0.3s ease,
+      transform 0.3s ease;
+
+    &:hover {
+      color: #967eff;
+      transform: translateY(-1px);
+    }
+
+    p {
+      margin: 0;
+    }
 
     img {
       width: 24px;
       height: 24px;
-      background-color: #967eff;
-      padding: 4px;
-      border-radius: 4px;
-    }
 
-    &:hover {
-      color: rgb(0, 0, 0);
+      padding: 4px;
+
+      background-color: #967eff;
+
+      border-radius: 4px;
+
+      object-fit: contain;
     }
 
     @include on-phone {
       align-self: center;
+      justify-content: center;
     }
 
     @include on-tablet {
-      display: flex;
       flex-direction: row;
       align-items: center;
     }
 
     @include on-desktop {
-      display: flex;
       flex-direction: row;
       align-items: center;
     }
