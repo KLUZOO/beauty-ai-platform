@@ -3,8 +3,14 @@ from datetime import (
     timedelta
 )
 
+from django_filters import OrderingFilter
+
 from beauty_service.models import Service
-from django.db.models import QuerySet
+from django.db.models import (
+    QuerySet,
+    Q
+)
+from django.db import transaction as db_transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -36,7 +42,10 @@ from rest_framework import (
 
 from salons.models import Salon
 
-from tasks.notification import send_email_task
+from tasks.notification import (
+    send_email_task,
+    send_appointment_event_task
+)
 
 from users.models import Master
 from users.permissions import IsMaster
@@ -48,7 +57,12 @@ from appointments.services.availability import (
     ServiceNotFoundError,
     SlotService,
 )
-from .filters import MasterAppointmentFilter, MasterAppointmentHistoryFilter, AppointmentListFilter
+from .filters import (
+    MasterAppointmentFilter,
+    MasterAppointmentHistoryFilter,
+    AppointmentListFilter,
+    AppointmentHistoryFilter
+)
 from .models import Appointment
 from .serializers import (
     AppointmentSerializer,
@@ -61,7 +75,9 @@ from .serializers import (
     MasterStatusUpdateSerializer,
     RescheduleSerializer,
     CreateAppointmentSerializer,
-    AppointmentDetailSerializer, AppointmentListSerializer,
+    AppointmentDetailSerializer,
+    AppointmentListSerializer,
+    AppointmentHistorySerializer
 )
 
 
@@ -615,29 +631,57 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
                 % (current_status, new_status)
             )
 
-        if new_status == "completed":
-            serializer.save(completed_at=timezone.now())
-        else:
-            serializer.save()
+        # Atomic transaction + on_commit notification for BE-BOOKING-07
+        with db_transaction.atomic():
+            if new_status == "completed":
+                appointment = serializer.save(completed_at=timezone.now())
+            else:
+                appointment = serializer.save()
 
-        # Trigger background email notification task to inform client of status change
-        send_email_task.delay(
-            recipient=appointment.client.email,
-            subject="Оновлення статусу вашого запису",
-            context={
-                "customer_name": appointment.client.get_full_name()
-                or appointment.client.email,
-                "booking_status": appointment.get_status_display(),
-                "salon_name": appointment.salon.name,
-                "master_name": appointment.master.user.get_full_name()
-                or appointment.master.user.email,
-                "service_name": appointment.service.name,
-                "booking_date": appointment.start.date().isoformat(),
-                "booking_time": appointment.start.time().strftime("%H:%M"),
-                "notification_message": "Статус вашого запису оновлено на '%s'."
-                % appointment.get_status_display(),
-            },
-        )
+            # Mapping status to required Event Types
+            event_type_map = {
+                "confirmed": "CONFIRMED",
+                "cancelled": "CANCELLED",
+                "completed": "COMPLETED",
+            }
+
+            if new_status in event_type_map:
+                payload = {
+                    "appointment_id": appointment.id,
+                    "client_id": appointment.client_id,
+                    "master_id": appointment.master_id,
+                    "salon_id": appointment.salon_id,
+                    "service_id": appointment.service_id,
+                    "appointment_date": appointment.start.date().isoformat(),
+                    "appointment_time": appointment.start.strftime("%H:%M"),
+                    "appointment_status": appointment.status,
+                    "event_type": event_type_map[new_status],
+                    "timestamp": timezone.now().isoformat(),
+                }
+
+                # Executed strictly after successful database commit
+                db_transaction.on_commit(lambda: send_appointment_event_task.delay(payload))
+
+            # Legacy email notification registered within transaction context
+            db_transaction.on_commit(
+                lambda: send_email_task.delay(
+                    recipient=appointment.client.email,
+                    subject="Оновлення статусу вашого запису",
+                    context={
+                        "customer_name": appointment.client.get_full_name()
+                                         or appointment.client.email,
+                        "booking_status": appointment.get_status_display(),
+                        "salon_name": appointment.salon.name,
+                        "master_name": appointment.master.user.get_full_name()
+                                       or appointment.master.user.email,
+                        "service_name": appointment.service.name,
+                        "booking_date": appointment.start.date().isoformat(),
+                        "booking_time": appointment.start.time().strftime("%H:%M"),
+                        "notification_message": "Статус вашого запису оновлено на '%s'."
+                                                % appointment.get_status_display(),
+                    },
+                )
+            )
 
 
 @extend_schema(
@@ -894,17 +938,16 @@ class AvailableTimeSlotsView(APIView):
 class CreateAppointmentView(generics.CreateAPIView):
     """
     POST /api/appointments/
-    Створення нового запису клієнтом (BE-BOOKING-02 / BE-CLIENT-08).
+    Creating a new client record (BE-BOOKING-02 / BE-CLIENT-08 / BE-BOOKING-03 / BE-BOOKING-07).
     """
     permission_classes = [IsAuthenticated]
     serializer_class = CreateAppointmentSerializer
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        # Getting the wizard and service (404 if not found)
         try:
             master = Master.objects.get(pk=data["master_id"])
         except Master.DoesNotExist:
@@ -915,7 +958,6 @@ class CreateAppointmentView(generics.CreateAPIView):
         except Service.DoesNotExist:
             return Response({"detail": "Послугу не знайдено."}, status=http_status.HTTP_404_NOT_FOUND)
 
-        # Calculating start and end datetimes
         tz = timezone.get_current_timezone()
         start_dt = timezone.make_aware(
             datetime.combine(data["appointment_date"], data["appointment_time"]),
@@ -923,14 +965,12 @@ class CreateAppointmentView(generics.CreateAPIView):
         )
         end_dt = start_dt + timedelta(minutes=service.duration_minutes)
 
-        # Check: Future tense
         if start_dt <= timezone.now():
             return Response(
                 {"detail": "Час запису повинен бути у майбутньому."},
                 status=http_status.HTTP_400_BAD_REQUEST
             )
 
-        # Checking available slots via SlotService (working hours, weekends, breaks)
         slot_service = SlotService(
             master_id=master.id,
             service_id=service.id,
@@ -946,7 +986,6 @@ class CreateAppointmentView(generics.CreateAPIView):
         except (MasterNotFoundError, ServiceNotFoundError, InvalidDateError) as e:
             return Response({"detail": str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
 
-        # Check if the selected time slot is in the list of available ones
         req_start_str = data["appointment_time"].strftime("%H:%M")
         is_slot_available = any(s["start"] == req_start_str for s in available_slots)
 
@@ -956,55 +995,47 @@ class CreateAppointmentView(generics.CreateAPIView):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
 
-        # Conflict prevention (Double-booking check) -> 409 Conflict
-        has_conflict = Appointment.objects.filter(
-            master=master,
-            start__lt=end_dt,
-            end__gt=start_dt
-        ).exclude(status__in=["cancelled", "no_show"]).exists()
+        # Protection against Concurrency + Notification publishing inside transaction context
+        with db_transaction.atomic():
+            has_conflict = Appointment.objects.select_for_update().filter(
+                master=master,
+                start__lt=end_dt,
+                end__gt=start_dt
+            ).exclude(status__in=["cancelled", "no_show"]).exists()
 
-        if has_conflict:
-            return Response(
-                {"detail": "Обраний слот вже зайнятий іншим бронюванням."},
-                status=http_status.HTTP_409_CONFLICT
+            if has_conflict:
+                return Response(
+                    {"detail": "Обраний слот вже зайнятий іншим бронюванням."},
+                    status=http_status.HTTP_409_CONFLICT
+                )
+
+            appointment = Appointment.objects.create(
+                client=request.user,
+                master=master,
+                salon=master.salon,
+                service=service,
+                start=start_dt,
+                end=end_dt,
+                notes=data.get("notes", ""),
+                status="pending"
             )
 
-        # Creating a record (Client ID is taken from request.user)
-        appointment = Appointment.objects.create(
-            client=request.user,
-            master=master,
-            salon=master.salon,
-            service=service,
-            start=start_dt,
-            end=end_dt,
-            notes=data.get("notes", ""),
-            status="pending"
-        )
-
-        # Notifications (Email to client and master)
-        send_email_task.delay(
-            recipient=request.user.email,
-            subject="Підтвердження бронювання",
-            context={
-                "customer_name": request.user.get_full_name() or request.user.email,
-                "salon_name": appointment.salon.name,
-                "service_name": service.name,
-                "booking_date": data["appointment_date"].isoformat(),
-                "booking_time": req_start_str,
+            # Notification payload for BE-BOOKING-07
+            payload = {
+                "appointment_id": appointment.id,
+                "client_id": appointment.client_id,
+                "master_id": appointment.master_id,
+                "salon_id": appointment.salon_id,
+                "service_id": appointment.service_id,
+                "appointment_date": appointment.start.date().isoformat(),
+                "appointment_time": appointment.start.strftime("%H:%M"),
+                "appointment_status": appointment.status,
+                "event_type": "CREATED",
+                "timestamp": timezone.now().isoformat(),
             }
-        )
-        if master.user and master.user.email:
-            send_email_task.delay(
-                recipient=master.user.email,
-                subject="Нове бронювання",
-                context={
-                    "master_name": master.user.get_full_name() or master.user.email,
-                    "customer_name": request.user.get_full_name() or request.user.email,
-                    "service_name": service.name,
-                    "booking_date": data["appointment_date"].isoformat(),
-                    "booking_time": req_start_str,
-                }
-            )
+
+            # Published ONLY after the transaction is successfully committed
+            db_transaction.on_commit(lambda: send_appointment_event_task.delay(payload))
 
         response_serializer = AppointmentSerializer(appointment)
         return Response(response_serializer.data, status=http_status.HTTP_201_CREATED)
@@ -1040,3 +1071,39 @@ class AppointmentDetailView(generics.RetrieveAPIView):
             raise PermissionDenied("У вас немає доступу до перегляду цього запису.")
 
         return appointment
+
+
+class AppointmentHistoryView(generics.ListAPIView):
+    serializer_class = AppointmentHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_class = AppointmentHistoryFilter
+    ordering_fields = ["start", "created_at", "status"]
+    ordering = ["-start"]
+
+    def get_queryset(self) -> QuerySet[Appointment, Appointment]:
+        user = self.request.user
+        now = timezone.now()
+
+        # Role differentiation
+        role = getattr(user, "role", "").upper()
+        if role == "ADMIN" or user.is_staff or user.is_superuser:
+            qs = Appointment.objects.all()
+        elif role == "MASTER" or hasattr(user, "master_profile"):
+            qs = Appointment.objects.filter(master__user=user)
+        else:
+            qs = Appointment.objects.filter(client=user)
+
+        # Filtering historical records:
+        # The sample includes: completed, canceled, no_show OR those where the start time has already passed
+        historical_statuses = ["completed", "cancelled", "no_show"]
+        active_statuses = ["pending", "confirmed", "in_progress"]
+
+        return qs.filter(
+            Q(status__in=historical_statuses) |
+            Q(start__lt=now)
+        ).exclude(
+            # Exclude future/active entries
+            status__in=active_statuses,
+            start__gte=now
+        ).select_related("client", "master", "salon", "service")

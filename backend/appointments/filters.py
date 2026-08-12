@@ -91,3 +91,33 @@ class AppointmentListFilter(django_filters.FilterSet):
             Q(client__last_name__icontains=value) |
             Q(client__email__icontains=value)
         )
+
+
+class AppointmentHistoryFilter(django_filters.FilterSet):
+    date_from = django_filters.DateFilter(field_name="start", lookup_expr="date__gte")
+    date_to = django_filters.DateFilter(field_name="start", lookup_expr="date__lte")
+    status = django_filters.CharFilter(field_name="status", lookup_expr="iexact")
+    salon = django_filters.CharFilter(field_name="salon__name", lookup_expr="icontains")
+    master = django_filters.CharFilter(method="filter_by_master")
+    service = django_filters.CharFilter(field_name="service__name", lookup_expr="icontains")
+    client = django_filters.CharFilter(method="filter_by_client")
+
+    class Meta:
+        model = Appointment
+        fields = ["date_from", "date_to", "status", "salon", "master", "service", "client"]
+
+    # noinspection PyMethodMayBeStatic
+    def filter_by_master(self, queryset, _name, value) -> QuerySet:
+        return queryset.filter(
+            Q(master__user__first_name__icontains=value) |
+            Q(master__user__last_name__icontains=value) |
+            Q(master__user__email__icontains=value)
+        )
+
+    # noinspection PyMethodMayBeStatic
+    def filter_by_client(self, queryset, _name, value) -> QuerySet:
+        return queryset.filter(
+            Q(client__first_name__icontains=value) |
+            Q(client__last_name__icontains=value) |
+            Q(client__email__icontains=value)
+        )

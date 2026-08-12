@@ -345,3 +345,78 @@ class AppointmentListSerializer(serializers.ModelSerializer):
         if hasattr(user, "get_full_name"):
             return user.get_full_name() or getattr(user, "email", str(user))
         return str(user)
+
+
+class AppointmentHistorySerializer(serializers.ModelSerializer):
+    appointment_id = serializers.IntegerField(source="id", read_only=True)
+    appointment_date = serializers.SerializerMethodField()
+    appointment_time = serializers.SerializerMethodField()
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    salon_name = serializers.CharField(source="salon.name", read_only=True)
+    master_name = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
+    appointment_status = serializers.CharField(source="status", read_only=True)
+    total_price = serializers.DecimalField(
+        source="service.price", max_digits=8, decimal_places=2, read_only=True
+    )
+    created_date = serializers.DateTimeField(source="created_at", read_only=True)
+    completed_date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "appointment_id",
+            "appointment_date",
+            "appointment_time",
+            "service_name",
+            "salon_name",
+            "master_name",
+            "client_name",
+            "appointment_status",
+            "total_price",
+            "created_date",
+            "completed_date",
+        ]
+
+    # noinspection PyMethodMayBeStatic
+    def get_appointment_date(self, obj) -> str | None:
+        return obj.start.strftime("%Y-%m-%d") if obj.start else None
+
+    # noinspection PyMethodMayBeStatic
+    def get_appointment_time(self, obj) -> str | None:
+        return obj.start.strftime("%H:%M") if obj.start else None
+
+    # noinspection PyMethodMayBeStatic
+    def get_master_name(self, obj) -> str | None:
+        if not obj.master:
+            return None
+        user = getattr(obj.master, "user", obj.master)
+        if hasattr(user, "get_full_name"):
+            return user.get_full_name() or getattr(user, "email", str(user))
+        return str(user)
+
+    # noinspection PyMethodMayBeStatic
+    def get_client_name(self, obj) -> str | None:
+        if not obj.client:
+            return None
+        return obj.client.get_full_name() or obj.client.email
+
+    # noinspection PyMethodMayBeStatic
+    def get_completed_date(self, obj) -> str | None:
+        # If the model has completed_at, return it, otherwise updated_at for completed
+        completed_at = getattr(obj, "completed_at", None)
+        if completed_at:
+            return completed_at.strftime("%Y-%m-%d %H:%M")
+        if getattr(obj, "status", "").lower() == "completed" and hasattr(obj, "updated_at"):
+            return obj.updated_at.strftime("%Y-%m-%d %H:%M")
+        return None
+
+    def to_representation(self, instance) -> dict:
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+
+        # Hide client_name for clients (according to Acceptance Criteria)
+        if request and hasattr(request.user, "role") and request.user.role == "CLIENT":
+            data.pop("client_name", None)
+
+        return data
