@@ -197,18 +197,21 @@ export const verifyToken = async (token?: string) => {
   return true;
 };
 
-export const verifyEmail = async (uidb64: string, token: string) => {
-  const response = await fetch(`${API_BASE_URL}/users/verify-email/`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
+export const verifyEmail = async (id: string, token: string) => {
+  const response = await fetch(
+    'http://beautyaiservice.polandcentral.cloudapp.azure.com/api/users/verify-email/',
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id,
+        token,
+      }),
     },
-    body: JSON.stringify({
-      id: uidb64,
-      token,
-    }),
-  });
+  );
 
   const responseText = await response.text();
 
@@ -225,7 +228,7 @@ export const verifyEmail = async (uidb64: string, token: string) => {
       data?.message ||
         data?.detail ||
         data?.error ||
-        `${response.status} ${response.statusText}`,
+        'Токен недійсний або прострочений.',
     );
   }
 

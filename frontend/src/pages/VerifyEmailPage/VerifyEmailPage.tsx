@@ -1,54 +1,43 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { verifyEmail } from '../../services/authService';
 import './VerifyEmailPage.scss';
 
 type Status = 'loading' | 'success' | 'error';
 
 export const VerifyEmailPage = () => {
-  const { uidb64, token } = useParams<{
-    uidb64: string;
-    token: string;
-  }>();
-
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const id = searchParams.get('id');
+  const token = searchParams.get('token');
 
   const [status, setStatus] = useState<Status>('loading');
   const [title, setTitle] = useState('Підтвердження...');
-  const [message, setMessage] = useState('Перевірка даних на сервері...');
+  const [message, setMessage] = useState(
+    'Перевірка даних на сервері...',
+  );
 
   useEffect(() => {
     const verifyEmailRequest = async () => {
-      if (!uidb64 || !token) {
+      if (!id || !token) {
         setStatus('error');
         setTitle('Посилання некоректне');
-        setMessage('Посилання не містить даних для підтвердження.');
+        setMessage(
+          'Посилання не містить даних для підтвердження.',
+        );
         return;
       }
 
       try {
-        const data = await verifyEmail(uidb64, token);
+        const data = await verifyEmail(id, token);
 
-        // Якщо verifyEmail повертає response/data з backend
-        if (
-          data &&
-          (data.success === true ||
-            data.status === 'ok' ||
-            data.verified === true)
-        ) {
-          setStatus('success');
-          setTitle('Реєстрацію підтверджено');
-          setMessage(data.message || 'Дякуємо — ви успішно зареєстровані.');
-        } else {
-          setStatus('error');
-          setTitle('Підтвердження не вдалося');
-          setMessage(
-            data?.message ||
-              data?.detail ||
-              data?.error ||
-              'Токен недійсний або прострочений.',
-          );
-        }
+        setStatus('success');
+        setTitle('Email успішно підтверджено');
+        setMessage(
+          data?.message ||
+            'Дякуємо! Ваш email успішно підтверджено.',
+        );
       } catch (error) {
         console.error('verifyEmail error:', error);
 
@@ -58,13 +47,13 @@ export const VerifyEmailPage = () => {
         setMessage(
           error instanceof Error
             ? error.message
-            : 'Спробуйте пізніше або перевірте посилання з електронної пошти.',
+            : 'Токен недійсний або прострочений.',
         );
       }
     };
 
     verifyEmailRequest();
-  }, [uidb64, token]);
+  }, [id, token]);
 
   return (
     <section className="verify-email">
@@ -80,12 +69,17 @@ export const VerifyEmailPage = () => {
         </div>
 
         <div className="email-body">
-          <h1 className="verify-email__title">{title}</h1>
+          <h1 className="verify-email__title">
+            {title}
+          </h1>
 
-          <p className="verify-email__message">{message}</p>
+          <p className="verify-email__message">
+            {message}
+          </p>
 
           <p className="note">
-            Якщо ви не створювали обліковий запис, просто проігноруйте цей лист.
+            Якщо ви не створювали обліковий запис,
+            просто проігноруйте цей лист.
           </p>
 
           {status !== 'loading' && (
