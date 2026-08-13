@@ -107,7 +107,7 @@ To use a different API URL, set:
 REACT_APP_API_URL=https://your-api-url.com/api
 ```
 
-Default: `http://localhost:5000/api`
+Default: `https://localhost:5000/api`
 
 ### Testing
 

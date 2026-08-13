@@ -23,7 +23,6 @@ export const Header = () => {
     isAuth: isAuthenticated(),
     user: getUserInfo(),
   });
-  const cartItemsCount = 0;
   const favoritesCount = 0;
 
   const location = useLocation();

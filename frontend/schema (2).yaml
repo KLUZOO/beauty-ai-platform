@@ -3078,12 +3078,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3101,12 +3101,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3124,12 +3124,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3147,12 +3147,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3170,12 +3170,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3193,12 +3193,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3216,12 +3216,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3239,12 +3239,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3262,12 +3262,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3285,12 +3285,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3308,12 +3308,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3331,12 +3331,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3354,12 +3354,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3377,12 +3377,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -3400,12 +3400,12 @@ components:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=4
+          example: https://api.example.org/accounts/?page=4
         previous:
           type: string
           nullable: true
           format: uri
-          example: http://api.example.org/accounts/?page=2
+          example: https://api.example.org/accounts/?page=2
         results:
           type: array
           items:
@@ -4355,6 +4355,6 @@ components:
         * `7` - Sunday
   securitySchemes:
     jwtAuth:
-      type: http
+      type: https
       scheme: bearer
       bearerFormat: JWT

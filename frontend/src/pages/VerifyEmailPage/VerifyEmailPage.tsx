@@ -97,7 +97,7 @@ export const VerifyEmailPage = () => {
           <small>
             З любов&apos;ю, команда Beauty AI&nbsp;•{' '}
             <a
-              href="http://beautyaiservice.polandcentral.cloudapp.azure.com/beauty.ai/"
+              href="https://beautyaiservice.polandcentral.cloudapp.azure.com/beauty.ai/"
               target="_blank"
               rel="noreferrer"
             >

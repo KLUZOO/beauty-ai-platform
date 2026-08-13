@@ -199,7 +199,7 @@ export const verifyToken = async (token?: string) => {
 
 export const verifyEmail = async (id: string, token: string) => {
   const response = await fetch(
-    'http://beautyaiservice.polandcentral.cloudapp.azure.com/api/users/verify-email/',
+    'https://beautyaiservice.polandcentral.cloudapp.azure.com/api/users/verify-email/',
     {
       method: 'POST',
       headers: {
