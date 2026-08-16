@@ -57,6 +57,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for retrieving detailed user profile information (Read-Only)."""
+    bookings_count = serializers.IntegerField(read_only=True)
+    total_spent = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+    )
 
     class Meta:
         model = User
@@ -74,6 +80,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "is_master",
             "registration_date_user",
             "last_update_user",
+            "bookings_count",
+            "total_spent",
         )
         read_only_fields = (
             "id",
@@ -83,6 +91,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "is_master",
             "registration_date_user",
             "last_update_user",
+            "bookings_count",
+            "total_spent",
         )
 
 

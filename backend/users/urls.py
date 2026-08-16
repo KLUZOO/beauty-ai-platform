@@ -8,6 +8,7 @@ from rest_framework_simplejwt.views import (
 
 from users.views import (
     ChangePasswordView,
+    ClientListView,
     CreateUserView,
     DayOffViewSet,
     FavoriteMastersListView,
@@ -30,6 +31,11 @@ router.register(
     "masters/me/day-offs",
     DayOffViewSet,
     basename="day-off",
+)
+router.register(
+    "clients",
+    ClientListView,
+    basename="clients",
 )
 
 urlpatterns = [
