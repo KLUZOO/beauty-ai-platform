@@ -330,8 +330,8 @@ class CancelAppointmentView(generics.UpdateAPIView):
                 context={
                     "customer_name": appointment.client.get_full_name() or appointment.client.email,
                     "service_name": appointment.service.name,
-                    "booking_date": appointment.start.strftime("%Y-%m-%d"),
-                    "booking_time": appointment.start.strftime("%H:%M"),
+                    "booking_date": timezone.localtime(appointment.start).strftime("%Y-%m-%d"),
+                    "booking_time": timezone.localtime(appointment.start).strftime("%H:%M"),
                     "reason": reason or "Не вказано",
                 }
             )
@@ -344,8 +344,8 @@ class CancelAppointmentView(generics.UpdateAPIView):
                     "master_name": appointment.master.user.get_full_name() or appointment.master.user.email,
                     "customer_name": appointment.client.get_full_name() or appointment.client.email,
                     "service_name": appointment.service.name,
-                    "booking_date": appointment.start.strftime("%Y-%m-%d"),
-                    "booking_time": appointment.start.strftime("%H:%M"),
+                    "booking_date": timezone.localtime(appointment.start).strftime("%Y-%m-%d"),
+                    "booking_time": timezone.localtime(appointment.start).strftime("%H:%M"),
                     "reason": reason or "Не вказано",
                 }
             )
@@ -652,8 +652,8 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
                     "master_id": appointment.master_id,
                     "salon_id": appointment.salon_id,
                     "service_id": appointment.service_id,
-                    "appointment_date": appointment.start.date().isoformat(),
-                    "appointment_time": appointment.start.strftime("%H:%M"),
+                    "appointment_date": timezone.localtime(appointment.start).date().isoformat(),
+                    "appointment_time": timezone.localtime(appointment.start).strftime("%H:%M"),
                     "appointment_status": appointment.status,
                     "event_type": event_type_map[new_status],
                     "timestamp": timezone.now().isoformat(),
@@ -675,8 +675,8 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
                         "master_name": appointment.master.user.get_full_name()
                                        or appointment.master.user.email,
                         "service_name": appointment.service.name,
-                        "booking_date": appointment.start.date().isoformat(),
-                        "booking_time": appointment.start.time().strftime("%H:%M"),
+                        "booking_date": timezone.localtime(appointment.start).date().isoformat(),
+                        "booking_time": timezone.localtime(appointment.start).strftime("%H:%M"),
                         "notification_message": "Статус вашого запису оновлено на '%s'."
                                                 % appointment.get_status_display(),
                     },
@@ -1027,8 +1027,8 @@ class CreateAppointmentView(generics.CreateAPIView):
                 "master_id": appointment.master_id,
                 "salon_id": appointment.salon_id,
                 "service_id": appointment.service_id,
-                "appointment_date": appointment.start.date().isoformat(),
-                "appointment_time": appointment.start.strftime("%H:%M"),
+                "appointment_date": timezone.localtime(appointment.start).date().isoformat(),
+                "appointment_time": timezone.localtime(appointment.start).strftime("%H:%M"),
                 "appointment_status": appointment.status,
                 "event_type": "CREATED",
                 "timestamp": timezone.now().isoformat(),

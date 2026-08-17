@@ -1,4 +1,6 @@
 from datetime import date as date_cls
+from typing import Any
+
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -257,19 +259,19 @@ class AppointmentDetailSerializer(serializers.ModelSerializer):
         ]
 
     # noinspection PyMethodMayBeStatic
-    def get_appointment_date(self, obj) -> str:
-        return obj.start.strftime("%Y-%m-%d") if obj.start else None
+    def get_appointment_date(self, obj) -> str | None:
+        return timezone.localtime(obj.start).strftime("%Y-%m-%d") if obj.start else None
 
     # noinspection PyMethodMayBeStatic
-    def get_appointment_time(self, obj) -> str:
-        return obj.start.strftime("%H:%M") if obj.start else None
+    def get_appointment_time(self, obj) -> str | None:
+        return timezone.localtime(obj.start).strftime("%H:%M") if obj.start else None
 
     # noinspection PyMethodMayBeStatic
-    def get_master_id(self, obj) -> int:
+    def get_master_id(self, obj) -> Any | None:
         return obj.master.id if obj.master else None
 
     # noinspection PyMethodMayBeStatic
-    def get_master_name(self, obj) -> str:
+    def get_master_name(self, obj) -> str | Any:
         if not obj.master:
             return None
         # Перевірка на наявність користувача або профілю
@@ -279,7 +281,7 @@ class AppointmentDetailSerializer(serializers.ModelSerializer):
         return str(user)
 
     # noinspection PyMethodMayBeStatic
-    def get_client_name(self, obj) -> str:
+    def get_client_name(self, obj) -> None:
         if not obj.client:
             return None
         return obj.client.get_full_name() or obj.client.email
@@ -325,11 +327,11 @@ class AppointmentListSerializer(serializers.ModelSerializer):
 
     # noinspection PyMethodMayBeStatic
     def get_appointment_date(self, obj) -> str | None:
-        return obj.start.strftime("%Y-%m-%d") if obj.start else None
+        return timezone.localtime(obj.start).strftime("%Y-%m-%d") if obj.start else None
 
     # noinspection PyMethodMayBeStatic
     def get_appointment_time(self, obj) -> str | None:
-        return obj.start.strftime("%H:%M") if obj.start else None
+        return timezone.localtime(obj.start).strftime("%H:%M") if obj.start else None
 
     # noinspection PyMethodMayBeStatic
     def get_client_name(self, obj) -> str | None:
@@ -380,11 +382,11 @@ class AppointmentHistorySerializer(serializers.ModelSerializer):
 
     # noinspection PyMethodMayBeStatic
     def get_appointment_date(self, obj) -> str | None:
-        return obj.start.strftime("%Y-%m-%d") if obj.start else None
+        return timezone.localtime(obj.start).strftime("%Y-%m-%d") if obj.start else None
 
     # noinspection PyMethodMayBeStatic
     def get_appointment_time(self, obj) -> str | None:
-        return obj.start.strftime("%H:%M") if obj.start else None
+        return timezone.localtime(obj.start).strftime("%H:%M") if obj.start else None
 
     # noinspection PyMethodMayBeStatic
     def get_master_name(self, obj) -> str | None:
@@ -406,9 +408,9 @@ class AppointmentHistorySerializer(serializers.ModelSerializer):
         # If the model has completed_at, return it, otherwise updated_at for completed
         completed_at = getattr(obj, "completed_at", None)
         if completed_at:
-            return completed_at.strftime("%Y-%m-%d %H:%M")
+            return timezone.localtime(completed_at).strftime("%Y-%m-%d %H:%M")
         if getattr(obj, "status", "").lower() == "completed" and hasattr(obj, "updated_at"):
-            return obj.updated_at.strftime("%Y-%m-%d %H:%M")
+            return timezone.localtime(obj.updated_at).strftime("%Y-%m-%d %H:%M")
         return None
 
     def to_representation(self, instance) -> dict:
