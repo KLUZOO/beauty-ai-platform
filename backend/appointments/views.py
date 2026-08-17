@@ -616,7 +616,7 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
     }
 
     serializer_class = MasterStatusUpdateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsMaster]
     http_method_names = ["patch"]
 
     def get_queryset(self) -> QuerySet[Appointment]:

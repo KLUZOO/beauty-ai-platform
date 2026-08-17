@@ -68,7 +68,8 @@ class CancelSerializer(serializers.ModelSerializer):
 class MasterStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
-        fields = ["status", "cancellation_reason"]
+        fields = ["id", "status", "cancellation_reason"]
+        read_only_fields = ["id"]
 
     def validate(self, attrs) -> dict:
         status = attrs.get("status")
