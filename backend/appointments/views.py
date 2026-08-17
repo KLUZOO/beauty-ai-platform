@@ -10,6 +10,7 @@ from django.db.models import (
     QuerySet,
     Q
 )
+
 from django.db import transaction as db_transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -20,6 +21,7 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     extend_schema,
 )
+
 from rest_framework import (
     filters,
     serializers
@@ -63,7 +65,10 @@ from .filters import (
     AppointmentListFilter,
     AppointmentHistoryFilter
 )
+from .mixins import StrictFilterOrderingMixin
+
 from .models import Appointment
+
 from .serializers import (
     AppointmentSerializer,
     AvailableSlotSerializer,
@@ -720,7 +725,7 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
         ),
     ],
 )
-class MasterAppointmentListView(generics.ListAPIView):
+class MasterAppointmentListView(StrictFilterOrderingMixin, generics.ListAPIView):
     """
     GET /api/appointments/master/active/
 
@@ -745,30 +750,6 @@ class MasterAppointmentListView(generics.ListAPIView):
             master__user=self.request.user,
             status__in=["pending", "confirmed", "in_progress"],
         ).select_related("client", "service", "salon")
-
-    def filter_queryset(self, queryset) -> QuerySet[Appointment]:
-        # Validate filter parameters explicitly to return HTTP 400 Bad Request on invalid input
-        filterset = self.filterset_class(self.request.query_params, queryset=queryset)
-        if not filterset.is_valid():
-            raise serializers.ValidationError(filterset.errors)
-        queryset = filterset.qs
-
-        # Validate ordering query param against allowed fields
-        ordering_param = self.request.query_params.get("ordering")
-        if ordering_param:
-            requested_fields = [f.lstrip("-") for f in ordering_param.split(",")]
-            invalid_fields = [
-                f for f in requested_fields if f not in self.ordering_fields
-            ]
-            if invalid_fields:
-                raise serializers.ValidationError(
-                    {
-                        "ordering": "Недопустимі поля сортування: %s"
-                        % ", ".join(invalid_fields)
-                    }
-                )
-
-        return super().filter_queryset(queryset)
 
 
 @extend_schema(
@@ -845,7 +826,7 @@ class MasterAppointmentDetailView(generics.RetrieveAPIView):
         ),
     ],
 )
-class MasterAppointmentHistoryView(generics.ListAPIView):
+class MasterAppointmentHistoryView(StrictFilterOrderingMixin, generics.ListAPIView):
     """
     GET /api/appointments/master/history/
 
@@ -870,29 +851,6 @@ class MasterAppointmentHistoryView(generics.ListAPIView):
             master__user=self.request.user,
             status__in=["completed", "cancelled"],
         ).select_related("client", "service")
-
-    def filter_queryset(self, queryset) -> QuerySet[Appointment]:
-        # Explicit validation for filter and ordering query parameters
-        filterset = self.filterset_class(self.request.query_params, queryset=queryset)
-        if not filterset.is_valid():
-            raise serializers.ValidationError(filterset.errors)
-        queryset = filterset.qs
-
-        ordering_param = self.request.query_params.get("ordering")
-        if ordering_param:
-            requested_fields = [f.lstrip("-") for f in ordering_param.split(",")]
-            invalid_fields = [
-                f for f in requested_fields if f not in self.ordering_fields
-            ]
-            if invalid_fields:
-                raise serializers.ValidationError(
-                    {
-                        "ordering": "Недопустимі поля сортування: %s"
-                        % ", ".join(invalid_fields)
-                    }
-                )
-
-        return super().filter_queryset(queryset)
 
 
 class AvailableTimeSlotsView(APIView):
