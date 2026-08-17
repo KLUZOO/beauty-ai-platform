@@ -82,6 +82,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "last_update_user",
             "bookings_count",
             "total_spent",
+            "city",
         )
         read_only_fields = (
             "id",

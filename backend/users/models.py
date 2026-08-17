@@ -30,6 +30,7 @@ class User(AbstractUser):
     phone = PhoneNumberField(
         unique=True,
     )
+    city = models.CharField(max_length=50, null=True, blank=True)
     photo = models.ImageField(
         upload_to=generate_upload_path,
         null=True,
@@ -186,7 +187,6 @@ class WeekDay(models.IntegerChoices):
 
 
 class WorkingSchedule(models.Model):
-
     master = models.ForeignKey(
         "Master",
         on_delete=models.CASCADE,
