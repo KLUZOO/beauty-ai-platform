@@ -1,21 +1,12 @@
-from django.contrib.auth.base_user import AbstractBaseUser
-from django.http import HttpResponse
-
 from beauty_service.models import Service
-from django.db.models import (
-    Avg,
-    Count,
-    F,
-    Prefetch,
-    Q,
-    Value, QuerySet
-)
+from django.contrib.auth import get_user_model
+from django.contrib.auth.base_user import AbstractBaseUser
+from django.db.models import Avg, Count, F, Prefetch, Q, QuerySet, Sum, Value
 from django.db.models.functions import Concat
-from django.shortcuts import (
-    get_object_or_404,
-    render
-)
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
 from django.views import View
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
@@ -23,33 +14,17 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
-from rest_framework import (
-    generics,
-    serializers,
-    status,
-    viewsets
-)
+from rest_framework import generics, mixins, serializers, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
-from rest_framework.permissions import (
-    AllowAny,
-    IsAuthenticated
-)
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from salons.models import (
-    Salon,
-    SalonStatus
-)
+from salons.models import Salon, SalonStatus
 
-from users.models import (
-    DayOff,
-    FavoriteMaster,
-    Master,
-    MasterStatus,
-    WorkingSchedule
-)
+from users.filters import UsersFilter
+from users.models import DayOff, FavoriteMaster, Master, MasterStatus, WorkingSchedule
 from users.permissions import IsMaster
 from users.serializers import (
     ChangePasswordSerializer,
@@ -123,8 +98,29 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = (IsAuthenticated,)
 
+    def get_queryset(self):
+        queryset = (
+            get_user_model()
+            .objects.filter(master__isnull=True)
+            .annotate(
+                bookings_count=Count(
+                    "appointments",
+                    filter=Q(appointments__status__in=["confirmed", "completed"]),
+                    distinct=True,
+                ),
+                total_spent=Sum(
+                    "appointments__payments__amount",
+                    filter=Q(appointments__status__in=["confirmed", "completed"])
+                    & Q(
+                        appointments__payments__payment_status="completed",
+                    ),
+                ),
+            )
+        )
+        return queryset
+
     def get_object(self) -> AbstractBaseUser:
-        return self.request.user
+        return self.get_queryset().get(pk=self.request.user.pk)
 
 
 @extend_schema_view(
@@ -168,6 +164,89 @@ class ManageMasterView(generics.RetrieveUpdateAPIView):
 
     def get_object(self) -> str:
         return self.request.user.master
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List clients",
+        description=(
+            "Returns a paginated list of clients. "
+            "Clients are users without an associated master profile."
+        ),
+        tags=["Clients"],
+        responses={
+            200: UserProfileSerializer(many=True),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided "
+                "or are invalid."
+            ),
+            403: OpenApiResponse(
+                description="Access is restricted to staff/admin users."
+            ),
+        },
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve client",
+        description="Returns detailed information about a specific client.",
+        tags=["Clients"],
+        responses={
+            200: UserProfileSerializer,
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided "
+                "or are invalid."
+            ),
+            403: OpenApiResponse(
+                description="Access is restricted to staff/admin users."
+            ),
+            404: OpenApiResponse(description="Client not found."),
+        },
+    ),
+)
+class ClientListView(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = UserProfileSerializer
+    permission_classes = (IsAdminUser,)
+
+    filter_backends = (
+        DjangoFilterBackend,
+        OrderingFilter,
+    )
+
+    filterset_class = UsersFilter
+
+    ordering_fields = (
+        "first_name",
+        "last_name",
+        "registration_date_user",
+        "bookings_count",
+        "total_spent",
+    )
+
+    ordering = ("-registration_date_user",)
+
+    def get_queryset(self):
+        queryset = (
+            get_user_model()
+            .objects.filter(master__isnull=True)
+            .annotate(
+                bookings_count=Count(
+                    "appointments",
+                    filter=Q(appointments__status__in=["confirmed", "completed"]),
+                    distinct=True,
+                ),
+                total_spent=Sum(
+                    "appointments__payments__amount",
+                    filter=Q(appointments__status__in=["confirmed", "completed"])
+                    & Q(
+                        appointments__payments__payment_status="completed",
+                    ),
+                ),
+            )
+        )
+        return queryset
 
 
 @extend_schema(

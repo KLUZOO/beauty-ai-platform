@@ -59,6 +59,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5500",
     "http://127.0.0.1:5500",
     "https://extymandriy.github.io",
+    "http://beautyaiservice.polandcentral.cloudapp.azure.com",
 ]
 
 # Application definition
