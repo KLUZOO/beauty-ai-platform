@@ -55,6 +55,9 @@ elif APP_ENV == "production":
 else:
     raise ValueError(f"Unknown APP_ENV: {APP_ENV}")
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://beautyaiservice.polandcentral.cloudapp.azure.com",
+]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5500",
     "http://127.0.0.1:5500",
