@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     "payments",
     "referral_events",
     "corsheaders",
+    "locations",
 ]
 
 MIDDLEWARE = [

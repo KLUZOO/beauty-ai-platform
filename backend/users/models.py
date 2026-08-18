@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Avg, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from locations.models import Location
 from phonenumber_field.modelfields import PhoneNumberField
 
 from .managers import UserManager
@@ -30,7 +31,7 @@ class User(AbstractUser):
     phone = PhoneNumberField(
         unique=True,
     )
-    city = models.CharField(max_length=50, null=True, blank=True)
+    city = models.ForeignKey(Location, null=True, on_delete=models.SET_NULL)
     photo = models.ImageField(
         upload_to=generate_upload_path,
         null=True,
@@ -383,3 +384,72 @@ class FavoriteMaster(models.Model):
 
     def __str__(self) -> str:
         return f"{self.client} → {self.master}"
+
+
+class UserClick(models.Model):
+    class SearchType(models.TextChoices):
+        AI_SEARCH = "ai_search", "AI search"
+        MANUAL = "manual", "Manual"
+        QUICK_FILTER = "quick_filter", "Quick filter"
+
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="clicks",
+    )
+
+    search_type = models.CharField(
+        max_length=20,
+        choices=SearchType.choices,
+    )
+
+    quick_filter_label = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+    )
+
+    service = models.ForeignKey(
+        "beauty_service.Service",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="user_clicks",
+    )
+
+    salon = models.ForeignKey(
+        "salons.Salon",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="user_clicks",
+    )
+
+    master = models.ForeignKey(
+        "users.Master",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="user_clicks",
+    )
+
+    click_datetime = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    led_to_booking = models.BooleanField(
+        default=False,
+    )
+
+    appointment = models.ForeignKey(
+        "appointments.Appointment",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="user_clicks",
+    )
+
+    def __str__(self):
+        return f"{self.search_type} click — {self.click_datetime}"

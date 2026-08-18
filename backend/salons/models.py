@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
+from locations.models import Location
 
 from .services import generate_upload_path
 
@@ -10,9 +11,10 @@ class SalonStatus(models.TextChoices):
     INACTIVE = "inactive", "Inactive"
     PENDING = "pending", "Pending"
 
+
 class AbstractSalon(models.Model):
     name = models.CharField(max_length=100)
-    city = models.CharField(max_length=50)
+    city = models.ForeignKey(Location, null=True, on_delete=models.SET_NULL)
     district = models.CharField(max_length=50, null=True, blank=True)
     address = models.CharField(max_length=150)
     phone = models.CharField(

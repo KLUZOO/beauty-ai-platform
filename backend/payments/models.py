@@ -47,3 +47,32 @@ class Payment(models.Model):
             f"({self.get_payment_method_display()}, "
             f"{self.get_payment_status_display()})"
         )
+
+class Commission(models.Model):
+    class PayerType(models.TextChoices):
+        SOLO_MASTER = "solo_master", "Solo master"
+        SALON = "salon", "Salon"
+
+    appointment = models.OneToOneField(
+        "appointments.Appointment",
+        on_delete=models.CASCADE,
+        related_name="commission",
+    )
+
+    payer_type = models.CharField(
+        max_length=20,
+        choices=PayerType.choices,
+    )
+
+    commission_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=3,
+    )
+
+    commission_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    def __str__(self):
+        return f"{self.commission_amount} — {self.payer_type}"
