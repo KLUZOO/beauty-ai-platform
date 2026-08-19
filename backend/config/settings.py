@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     "referral_events",
     "corsheaders",
     "locations",
+    "search",
 ]
 
 MIDDLEWARE = [
