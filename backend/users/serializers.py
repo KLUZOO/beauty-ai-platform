@@ -5,6 +5,7 @@ from beauty_service.models import Service
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.exceptions import ValidationError as DjangoValidationError
+from locations.models import Location
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 from salons.models import Salon
@@ -55,14 +56,31 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
+class ResidenceUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = (
+            "id",
+            "country",
+            "city_name",
+            "address",
+            "region",
+            "coordinates",
+            "timezone",
+            "city_tier",
+        )
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for retrieving detailed user profile information (Read-Only)."""
+
     bookings_count = serializers.IntegerField(read_only=True)
     total_spent = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
         read_only=True,
     )
+    residence = ResidenceUserSerializer(read_only=True)
 
     class Meta:
         model = User
@@ -82,7 +100,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "last_update_user",
             "bookings_count",
             "total_spent",
-            "city",
+            "residence",
         )
         read_only_fields = (
             "id",
@@ -94,13 +112,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "last_update_user",
             "bookings_count",
             "total_spent",
+            "residence",
         )
 
 
 # HELPER / NESTED SERIALIZERS
-class AssignedSalonsSerializer(serializers.ModelSerializer):
-    """Nested serializer for brief salon details."""
-
+class SalonShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Salon
         fields = (
@@ -253,7 +270,7 @@ class MasterProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     phone = PhoneNumberField(source="user.phone")
     photo = serializers.ImageField(source="user.photo")
-    assigned_salons = AssignedSalonsSerializer(
+    assigned_salons = SalonShortSerializer(
         source="salons",
         many=True,
         read_only=True,
@@ -302,15 +319,6 @@ class MasterProfileSerializer(serializers.ModelSerializer):
         instance.user.save()
 
         return super().update(instance, validated_data)
-
-
-class SalonShortSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Salon
-        fields = (
-            "id",
-            "name",
-        )
 
 
 class MasterListSerializer(serializers.ModelSerializer):

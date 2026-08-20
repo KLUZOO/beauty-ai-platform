@@ -14,9 +14,6 @@ class SalonStatus(models.TextChoices):
 
 class AbstractSalon(models.Model):
     name = models.CharField(max_length=100)
-    city = models.ForeignKey(Location, null=True, on_delete=models.SET_NULL)
-    district = models.CharField(max_length=50, null=True, blank=True)
-    address = models.CharField(max_length=150)
     phone = models.CharField(
         max_length=20,
         blank=True,
@@ -26,8 +23,6 @@ class AbstractSalon(models.Model):
         null=True,
         blank=True,
     )
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
     external_booking_url = models.URLField(
         null=True,
         blank=True,
@@ -68,14 +63,13 @@ class Salon(AbstractSalon):
         through="users.MasterSalon",
         related_name="salons",
     )
-
-    class Meta:
-        db_table = "salons"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["name", "address"], name="unique_partner_salon_name_address"
-            ),
-        ]
+    location = models.ForeignKey(
+            Location,
+            on_delete=models.SET_NULL,
+            null=True,
+            blank=True,
+            related_name="salons",
+        )
 
 
 class CachedSalon(AbstractSalon):
@@ -87,14 +81,13 @@ class CachedSalon(AbstractSalon):
         null=True,
         blank=True,
     )
-
-    class Meta:
-        db_table = "cached_salons"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["name", "address"], name="unique_cached_salon_name_address"
-            ),
-        ]
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="сached_salons",
+    )
 
 
 class SalonWorkingHours(models.Model):

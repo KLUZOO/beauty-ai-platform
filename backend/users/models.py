@@ -31,7 +31,20 @@ class User(AbstractUser):
     phone = PhoneNumberField(
         unique=True,
     )
-    city = models.ForeignKey(Location, null=True, on_delete=models.SET_NULL)
+    residence = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="current_residents",
+    )
+    previous_residence = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="former_residents",
+    )
     photo = models.ImageField(
         upload_to=generate_upload_path,
         null=True,
@@ -57,18 +70,6 @@ class User(AbstractUser):
         "salons.Salon",
         blank=True,
         related_name="followers",
-    )
-    last_latitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        null=True,
-        blank=True,
-    )
-    last_longitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        null=True,
-        blank=True,
     )
     registration_date_user = models.DateTimeField(
         auto_now_add=True,
@@ -149,6 +150,13 @@ class Master(models.Model):
         max_length=20,
         choices=MasterStatus.choices,
         default=MasterStatus.PENDING,
+    )
+    workplace = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="employees",
     )
 
     @property
@@ -384,6 +392,3 @@ class FavoriteMaster(models.Model):
 
     def __str__(self) -> str:
         return f"{self.client} → {self.master}"
-
-
-

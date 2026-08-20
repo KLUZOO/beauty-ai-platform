@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "locations",
     "search",
+    "django.contrib.gis",
 ]
 
 MIDDLEWARE = [
@@ -126,6 +127,8 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DB_ENGINE = os.getenv("DB_ENGINE", "sqlite")
 
+
+
 if DB_ENGINE == "sqlite":
     DATABASES = {
         "default": {
@@ -136,7 +139,7 @@ if DB_ENGINE == "sqlite":
 elif DB_ENGINE == "postgres":
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.postgresql",
+            "ENGINE": "django.contrib.gis.db.backends.postgis",
             "NAME": os.environ.get("POSTGRES_DB", "POSTGRES_DB"),
             "USER": os.environ.get("POSTGRES_USER", "POSTGRES_USER"),
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "POSTGRES_PASSWORD"),
