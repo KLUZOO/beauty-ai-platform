@@ -4,8 +4,14 @@ from .models import Review
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    master = serializers.IntegerField(source="appointment.master", read_only=True)
-    client = serializers.IntegerField(source="appointment.client", read_only=True)
+    master = serializers.IntegerField(
+        source="appointment.master.id",
+        read_only=True,
+    )
+    client = serializers.IntegerField(
+        source="appointment.client.id",
+        read_only=True,
+    )
 
     class Meta:
         model = Review
@@ -18,7 +24,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "comment",
             "created_at",
         )
-        read_only_fields = ("id", "client", "created_at")
+        read_only_fields = ("id", "client", "master", "created_at")
 
 
 class MasterReviewSerializer(serializers.ModelSerializer):
