@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Avg, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from locations.models import Location
 from phonenumber_field.modelfields import PhoneNumberField
 
 from .managers import UserManager
@@ -29,6 +30,20 @@ class User(AbstractUser):
     email = models.EmailField(_("email address"), unique=True)
     phone = PhoneNumberField(
         unique=True,
+    )
+    residence = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="current_residents",
+    )
+    previous_residence = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="former_residents",
     )
     photo = models.ImageField(
         upload_to=generate_upload_path,
@@ -55,18 +70,6 @@ class User(AbstractUser):
         "salons.Salon",
         blank=True,
         related_name="followers",
-    )
-    last_latitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        null=True,
-        blank=True,
-    )
-    last_longitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        null=True,
-        blank=True,
     )
     registration_date_user = models.DateTimeField(
         auto_now_add=True,
@@ -148,6 +151,13 @@ class Master(models.Model):
         choices=MasterStatus.choices,
         default=MasterStatus.PENDING,
     )
+    workplace = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="employees",
+    )
 
     @property
     def active_services(self) -> QuerySet:
@@ -186,7 +196,6 @@ class WeekDay(models.IntegerChoices):
 
 
 class WorkingSchedule(models.Model):
-
     master = models.ForeignKey(
         "Master",
         on_delete=models.CASCADE,

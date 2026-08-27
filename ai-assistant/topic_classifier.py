@@ -40,7 +40,7 @@ async def is_on_topic(message: str) -> bool:
     """
     prompt = CLASSIFIER_PROMPT.format(message=message)
 
-    # Виправляємо на асинхронний виклик через await та _async
+    # Fix for asynchronous call via await and _async
     response = await _classifier_model.generate_content_async(prompt)
     verdict = response.text.strip().upper()
 

@@ -1,9 +1,11 @@
 from rest_framework import viewsets
 
+from referral_events.models import LinkTracking
 from referral_events.serializers import ReferralEventSerializer
 
 
 class ReferralEventViewSet(viewsets.ModelViewSet):
+    queryset = LinkTracking.objects.all()
     serializer_class = ReferralEventSerializer
     permission_classes = ()
 

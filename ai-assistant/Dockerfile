@@ -9,13 +9,13 @@ COPY requirements.txt .
 
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
-# Створюємо користувача заздалегідь
+# Create the user in advance
 RUN useradd -u 10100 -m appuser
 
-# Копіюємо проект
+# Copy the project
 COPY . .
 
-# Створюємо окрему папку для бази даних всередині контейнера
+# Create a separate folder for the database inside the container
 RUN mkdir -p /app/data && chown -R appuser:appuser /app
 
 USER appuser

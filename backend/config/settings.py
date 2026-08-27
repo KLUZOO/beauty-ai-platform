@@ -55,11 +55,15 @@ elif APP_ENV == "production":
 else:
     raise ValueError(f"Unknown APP_ENV: {APP_ENV}")
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://beautyaiservice.polandcentral.cloudapp.azure.com",
+]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5500",
     "http://127.0.0.1:5500",
     "https://extymandriy.github.io",
     "http://beautyaiservice.polandcentral.cloudapp.azure.com",
+    "https://beautyaiservice.polandcentral.cloudapp.azure.com",
 ]
 
 # Application definition
@@ -83,6 +87,9 @@ INSTALLED_APPS = [
     "payments",
     "referral_events",
     "corsheaders",
+    "locations",
+    "search",
+    "django.contrib.gis",
 ]
 
 MIDDLEWARE = [
@@ -120,6 +127,8 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DB_ENGINE = os.getenv("DB_ENGINE", "sqlite")
 
+
+
 if DB_ENGINE == "sqlite":
     DATABASES = {
         "default": {
@@ -130,7 +139,7 @@ if DB_ENGINE == "sqlite":
 elif DB_ENGINE == "postgres":
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.postgresql",
+            "ENGINE": "django.contrib.gis.db.backends.postgis",
             "NAME": os.environ.get("POSTGRES_DB", "POSTGRES_DB"),
             "USER": os.environ.get("POSTGRES_USER", "POSTGRES_USER"),
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "POSTGRES_PASSWORD"),

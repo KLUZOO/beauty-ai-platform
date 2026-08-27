@@ -2,7 +2,7 @@ from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict
 )
-from pydantic import Field  # Додаємо імпорт Field
+from pydantic import Field
 
 
 class Settings(BaseSettings):

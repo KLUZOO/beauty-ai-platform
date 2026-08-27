@@ -1,11 +1,11 @@
 from rest_framework import serializers
 
-from referral_events.models import ReferralEvent
+from referral_events.models import LinkTracking
 
 
 class ReferralEventSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ReferralEvent
+        model = LinkTracking
         fields = (
             "id",
             "client",

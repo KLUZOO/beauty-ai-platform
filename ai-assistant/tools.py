@@ -88,14 +88,27 @@ async def dispatch_tool_call(name: str, args: dict, client_token: str | None) ->
 
             return {"error": f"Unknown tool: {name}"}
 
-    except (httpx.HTTPStatusError, httpx.ConnectError, httpx.TimeoutException) as e:
-        # If Django is down, gives a 500 error, or waits for a timeout
+    except httpx.HTTPStatusError as e:
+        # If DRF returned 404, 400 or 422 (no data or incorrect parameters)
+        if e.response.status_code in (400, 404, 422):
+            return {
+                "status": "not_found",
+                "message": f"Запитувані дані не знайдено в базі (код {e.response.status_code})."
+            }
+        # If 500, 502, 503 (real backend crash)
         return {
             "error": "система бронювання тимчасово недоступна через технічні проблеми на бекенді",
             "details": str(e)
         }
+
+    except (httpx.ConnectError, httpx.TimeoutException) as e:
+        # Network connection errors
+        return {
+            "error": "не вдалося з'єднатися з сервером бронювання",
+            "details": str(e)
+        }
     except Exception as e:
-        # Any other unexpected error
+        # McCombo for other unexpected errors 👀
         return {
             "error": "невідома помилка під час виконання інструменту",
             "details": str(e)

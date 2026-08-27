@@ -25,8 +25,10 @@ class Appointment(models.Model):
     salon = models.ForeignKey(
         "salons.Salon",
         related_name="appointments",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         db_column="salon_id",
+        null=True,
+        blank=True,
     )
     service = models.ForeignKey(
         "beauty_service.Service",

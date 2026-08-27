@@ -16,7 +16,10 @@ services:
     volumes:
       - ./backend:/app  # Mount only the backend folder
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   celery:
     build:
@@ -28,7 +31,10 @@ services:
     volumes:
       - ./backend:/app  # Mount only the backend folder
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   beat:
     build:
@@ -40,12 +46,45 @@ services:
     volumes:
       - ./backend:/app  # Mount only the backend folder
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgis/postgis:18-3.6
+    env_file:
+      - ./backend/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:8-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "ping",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   ai-assistant:
     build:
@@ -62,3 +101,6 @@ services:
       - ./ai_assistant_data:/app/data
     depends_on:
       - web
+
+volumes:
+  postgres_data:
