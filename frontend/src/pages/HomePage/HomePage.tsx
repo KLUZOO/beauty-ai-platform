@@ -278,7 +278,7 @@ export const HomePage = () => {
         <div className="hero__content">
           <p className="hero__eyebrow">AI Рекомендації</p>
           <h1 className="hero__title">
-            Знайдіть ідеального майстра за допомогою <span>AI</span>
+            Знайдіть ідеального майстра за допомогою <span>DevOps</span>
           </h1>
           <p className="hero__subtitle">
             Опишіть, що вам потрібно, а ми знайдемо найкращі варіанти серед
