@@ -1,2 +1,0 @@
-# beauty-ai-platform(frontend)
-
