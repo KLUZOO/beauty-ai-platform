@@ -7,6 +7,15 @@ import App from "./App";
 // App.css in the bundle). App.tsx already imports App.css directly, which
 // is the actual Beauty AI stylesheet — no global import needed here.
 
+// is the entry point for the React app, and it renders the App component into the root div in index.html
+
+
+
+
+
+
+
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />

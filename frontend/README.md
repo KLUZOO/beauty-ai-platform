@@ -128,4 +128,9 @@ The project is being developed as a cross-functional product involving product m
 
 ## Repository
 
+
+
+
+
+
 [GitHub Repository](https://github.com/prutkih86-oss/beauty-ai-frontend)
