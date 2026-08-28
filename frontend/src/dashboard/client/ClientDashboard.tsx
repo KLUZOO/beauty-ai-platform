@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { AuthRole, Lang, MockUser } from "../types";
+import { apiRequest, apiResults, type ApiAppointment, type ApiFavoriteMaster } from "../../api";
 
 const masterImages = [
   "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop",
@@ -18,6 +19,7 @@ const bookingImage =
   "https://images.pexels.com/photos/705255/pexels-photo-705255.jpeg?auto=compress&cs=tinysrgb&w=1000&h=700&fit=crop";
 
 type Review = {
+  appointmentId?: number;
   master: number;
   salon: number;
   comment: string;
@@ -68,20 +70,40 @@ export default function ClientDashboard({
   const [profileEmail, setProfileEmail] = useState(user.email);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifyPush, setNotifyPush] = useState(true);
+  const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
+  const [liveFavorites, setLiveFavorites] = useState<ApiFavoriteMaster[]>([]);
+  const [apiNotice, setApiNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.allSettled([
+      apiRequest<{ results?: ApiAppointment[] } | ApiAppointment[]>("/api/appointments/my/?ordering=-start&page=1"),
+      apiRequest<{ results?: ApiFavoriteMaster[] } | ApiFavoriteMaster[]>("/api/users/favorite-masters/?page=1"),
+    ]).then(([appointmentsResult, favoritesResult]) => {
+      if (cancelled) return;
+      if (appointmentsResult.status === "fulfilled") setAppointments(apiResults(appointmentsResult.value));
+      if (favoritesResult.status === "fulfilled") setLiveFavorites(apiResults(favoritesResult.value));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const firstName = useMemo(() => {
     const value = user.name?.trim().split(/\s+/)[0];
     return value || (ua ? "Наталя" : "Natalia");
   }, [user.name, ua]);
 
-  const history = [
+  const demoHistory = [
     {
+      id: undefined,
       salon: "Beauty Room",
       master: ua ? "Ірина Бондар" : "Iryna Bondar",
       service: ua ? "Манікюр · гель-лак" : "Manicure · gel polish",
       date: ua ? "27 травня" : "May 27",
     },
     {
+      id: undefined,
       salon: "Perfect Look",
       master: ua ? "Марія Левченко" : "Maria Levchenko",
       service: ua ? "Стрижка та укладка" : "Haircut & styling",
@@ -89,11 +111,31 @@ export default function ClientDashboard({
     },
   ];
 
-  const favoriteMasters = [
+  const history = appointments.length > 0
+    ? appointments.map((appointment) => ({
+        id: appointment.id,
+        salon: `Salon #${appointment.salon}`,
+        master: `Master #${appointment.master}`,
+        service: `Service #${appointment.service}`,
+        date: new Date(appointment.start).toLocaleDateString(ua ? "uk-UA" : "en-US", { day: "numeric", month: "short" }),
+      }))
+    : demoHistory;
+
+  const favoriteMasters = liveFavorites.length > 0
+    ? liveFavorites.map((master) => ({
+        id: master.id,
+        name: master.name,
+        type: master.active_services?.[0]?.name || (ua ? "Майстер" : "Master"),
+        rating: Number(master.average_rating ?? 0),
+        image: master.profile_photo || masterImages[0],
+      }))
+    : [
     { name: ua ? "Олена К." : "Olena K.", type: ua ? "Манікюр" : "Manicure", rating: 5.0, image: masterImages[0] },
     { name: ua ? "Марія П." : "Maria P.", type: ua ? "Брови" : "Brows", rating: 5.0, image: masterImages[1] },
     { name: ua ? "Дмитро С." : "Dmytro S.", type: ua ? "Чоловічі стрижки" : "Men's haircuts", rating: 4.9, image: masterImages[2] },
   ];
+
+  const upcomingAppointment = appointments.find((appointment) => !["completed", "cancelled", "no_show"].includes(appointment.status));
 
   const liked = [
     { name: "Velvet Nails & Spa", type: ua ? "Салон краси" : "Beauty salon", rating: 4.9, reviews: 131, distance: ua ? "0.9 км" : "0.9 km", district: ua ? "Печерський р-н" : "Pechersk", match: 96, image: likedImages[0] },
@@ -104,6 +146,58 @@ export default function ClientDashboard({
 
   const patchReview = (index: number, patch: Partial<Review>) =>
     setRatings((prev) => ({ ...prev, [index]: { ...prev[index], ...patch, sent: false } }));
+
+  const refreshAppointments = async () => {
+    try {
+      const payload = await apiRequest<{ results?: ApiAppointment[] } | ApiAppointment[]>("/api/appointments/my/?ordering=-start&page=1");
+      setAppointments(apiResults(payload));
+    } catch (error: any) {
+      setApiNotice(error.message || (ua ? "Не вдалося оновити записи" : "Could not refresh bookings"));
+    }
+  };
+
+  const submitReview = async (index: number) => {
+    const review = ratings[index];
+    const appointmentId = review.appointmentId ?? history[index]?.id;
+    if (!appointmentId) {
+      setRatings((prev) => ({ ...prev, [index]: { ...prev[index], sent: true } }));
+      return;
+    }
+    try {
+      await apiRequest(`/api/appointments/${appointmentId}/review/`, {
+        method: "POST",
+        body: JSON.stringify({ rating: review.master || review.salon, comment: review.comment }),
+      });
+      setRatings((prev) => ({ ...prev, [index]: { ...prev[index], sent: true } }));
+      setApiNotice(ua ? "Відгук надіслано" : "Review submitted");
+    } catch (error: any) {
+      setApiNotice(error.message || (ua ? "Не вдалося надіслати відгук" : "Could not submit review"));
+    }
+  };
+
+  const cancelAppointment = async (appointmentId: number) => {
+    if (!window.confirm(ua ? "Скасувати цей запис?" : "Cancel this booking?")) return;
+    try {
+      await apiRequest(`/api/appointments/${appointmentId}/cancel/`, { method: "PATCH" });
+      await refreshAppointments();
+      setApiNotice(ua ? "Запис скасовано" : "Booking cancelled");
+    } catch (error: any) {
+      setApiNotice(error.message || (ua ? "Не вдалося скасувати запис" : "Could not cancel booking"));
+    }
+  };
+
+  const saveProfile = async () => {
+    const [first_name, ...lastNameParts] = profileName.trim().split(/\s+/);
+    try {
+      await apiRequest("/api/users/me/", {
+        method: "PATCH",
+        body: JSON.stringify({ first_name: first_name || "", last_name: lastNameParts.join(" "), phone: profilePhone }),
+      });
+      setApiNotice(ua ? "Профіль збережено" : "Profile saved");
+    } catch (error: any) {
+      setApiNotice(error.message || (ua ? "Не вдалося зберегти профіль" : "Could not save profile"));
+    }
+  };
 
   const renderReviewForm = (index: number) => {
     const visit = history[index];
@@ -131,7 +225,7 @@ export default function ClientDashboard({
           <span className={!review.master || !review.salon ? "review-hint" : "review-hint ready"}>
             {!review.master || !review.salon ? (ua ? "Поставте оцінку і майстру, і салону" : "Rate both the master and salon") : (ua ? "Все готово до відправлення" : "Ready to submit")}
           </span>
-          <button type="button" className="review-submit-btn" disabled={!review.master || !review.salon} onClick={() => setRatings((prev) => ({ ...prev, [index]: { ...prev[index], sent: true } }))}>
+          <button type="button" className="review-submit-btn" disabled={!review.master || !review.salon} onClick={() => void submitReview(index)}>
             {review.sent ? (ua ? "Надіслано ✓" : "Sent ✓") : ua ? "Надіслати відгук" : "Submit review"}
           </button>
         </div>
