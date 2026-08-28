@@ -10,8 +10,14 @@ RUN npm ci --ignore-scripts
 
 COPY . .
 
-EXPOSE 5173
+
+RUN npx vite build
 
 
+FROM nginxinc/nginx-unprivileged:stable-alpine
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+COPY --chown=nginx:nginx --from=builder /app/dist /usr/share/nginx/html/beauty.ai
+COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]
