@@ -1,0 +1,24 @@
+name: Start Azure Virtual Machine
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  
+jobs:
+  start:
+    name: "Starting VM"
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Azure login
+      uses: azure/login@v3
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Vm up
+      run: |
+        az vm start --resource-group beauty-app-rg --name TestingVM && \
+        echo "VM started"

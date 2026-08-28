@@ -1,22 +1,13 @@
-FROM node:20-alpine AS builder
+
+FROM node:22-alpine
+
 WORKDIR /app
 
-ENV CYPRESS_INSTALL_BINARY=0
-
 COPY package*.json ./
-
-RUN npm ci --ignore-scripts
-
+RUN npm install
 
 COPY . .
 
+EXPOSE 5173
 
-RUN npx vite build
-
-
-FROM nginxinc/nginx-unprivileged:stable-alpine
-
-COPY --chown=nginx:nginx --from=builder /app/dist /usr/share/nginx/html/beauty.ai
-
-EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

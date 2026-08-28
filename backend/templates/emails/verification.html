@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify your email</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f4;padding:40px 0;">
+    <tr>
+        <td align="center">
+
+            <table role="presentation"
+                   width="600"
+                   cellspacing="0"
+                   cellpadding="0"
+                   style="background:#ffffff;border-radius:10px;padding:40px;">
+
+                <tr>
+                    <td align="center">
+                        <h1 style="margin:0;color:#222;">
+                            Beauty AI Platform
+                        </h1>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding-top:30px;">
+                        <h2 style="margin:0;color:#333;">
+                            Підтвердіть свою електронну адресу.
+                        </h2>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding-top:20px;font-size:16px;color:#555;line-height:1.6;">
+                        Дякуємо за реєстрацію.
+
+                        <br><br>
+
+                        Підтвердіть свою електронну адресу, натиснувши кнопку нижче.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding:40px 0;">
+                        <a href="{{ verification_url }}"
+                           style="
+                               display:inline-block;
+                               padding:14px 32px;
+                               background:#2563eb;
+                               color:#ffffff;
+                               text-decoration:none;
+                               border-radius:6px;
+                               font-size:16px;
+                               font-weight:bold;
+                           ">
+                            Підтвердіть електронну адресу
+                        </a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="font-size:14px;color:#777;line-height:1.6;">
+                        Якщо кнопка не працює, скопіюйте наведене нижче посилання та вставте його в адресний рядок браузера:
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding-top:10px;word-break:break-all;">
+                        <a href="{{ verification_url }}">
+                            {{ verification_url }}
+                        </a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding-top:40px;font-size:14px;color:#777;">
+                        Якщо ви не створювали обліковий запис, просто проігноруйте цей лист.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding-top:30px;font-size:14px;color:#999;">
+                        © {% now "Y" %} Beauty AI Platform
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

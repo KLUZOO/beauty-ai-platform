@@ -1,3 +1,4 @@
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
@@ -6,15 +7,6 @@ import App from "./App";
 // conflict with App.css and were overriding it, since it loaded after
 // App.css in the bundle). App.tsx already imports App.css directly, which
 // is the actual Beauty AI stylesheet — no global import needed here.
-
-// is the entry point for the React app, and it renders the App component into the root div in index.html
-
-
-
-
-
-
-
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
