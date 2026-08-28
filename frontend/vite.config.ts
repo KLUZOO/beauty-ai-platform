@@ -6,6 +6,7 @@ export default defineConfig({
  
   server: {
     allowedHosts: ["fool-creatable-ignition.ngrok-free.dev", "beautyaiservice.polandcentral.cloudapp.azure.com"],
+
     proxy: {
       "/api": {
         target: "https://beautyaiservice.polandcentral.cloudapp.azure.com",
@@ -17,4 +18,3 @@ export default defineConfig({
     },
   },
 });
- 

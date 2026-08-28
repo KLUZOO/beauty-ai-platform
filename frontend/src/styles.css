@@ -336,6 +336,18 @@ a {
   font-size: 11px;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 .ai-icon,
 .ai-large-icon {
   background: var(--lavender-soft);
@@ -349,6 +361,15 @@ a {
   width: 35px;
   height: 35px;
 }
+
+
+
+
+
+
+
+
+
 
 .rating-card {
   right: -16px;
@@ -372,4 +393,3 @@ a {
   color: var(--muted);
   font-size: 11px;
   margin-left: 3px;
-}

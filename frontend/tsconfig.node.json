@@ -13,4 +13,3 @@
     "strict": true
   },
   "include": ["vite.config.ts"]
-}
