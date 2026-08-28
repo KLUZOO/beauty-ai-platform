@@ -1,0 +1,375 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #292634;
+  background: #fbfaff;
+  font-synthesis: none;
+
+  --lavender: #9a86d8;
+  --lavender-dark: #7d68c2;
+  --lavender-soft: #eeeafb;
+
+  --ink: #292634;
+  --muted: #817b8d;
+  --line: #e9e5ef;
+  --white: #fff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #fbfaff;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  width: min(1180px, calc(100% - 40px));
+  margin: auto;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+.header {
+  height: 76px;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(16px);
+}
+
+.nav {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 38px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.45px;
+  white-space: nowrap;
+}
+
+.brand b {
+  color: var(--lavender);
+  font-weight: 800;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--lavender);
+  box-shadow: 0 7px 20px rgba(154, 134, 216, 0.25);
+}
+
+.nav-links {
+  display: flex;
+  gap: 28px;
+  margin-right: auto;
+  color: #706a79;
+  font-size: 14px;
+}
+
+.nav-links a {
+  transition: color 0.2s ease;
+}
+
+.nav-links a:hover {
+  color: var(--lavender-dark);
+}
+
+.profile-btn {
+  background: var(--lavender-soft);
+  color: var(--lavender-dark);
+  padding: 10px 17px;
+  border-radius: 12px;
+  font-weight: 750;
+  font-size: 13px;
+  transition: 0.2s ease;
+}
+
+.profile-btn:hover {
+  background: #e6e0f8;
+  transform: translateY(-1px);
+}
+
+.mobile-menu {
+  display: none;
+  background: none;
+  color: var(--ink);
+}
+
+/* =========================
+   HERO
+   ========================= */
+
+.hero {
+  padding: 76px 0 88px;
+  overflow: hidden;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.04fr 0.96fr;
+  gap: 68px;
+  align-items: center;
+}
+
+.eyebrow,
+.section-kicker {
+  color: var(--lavender-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.hero h1 {
+  font-size: clamp(48px, 6vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -4px;
+  margin: 18px 0 24px;
+  font-weight: 750;
+}
+
+.hero h1 span {
+  color: var(--lavender);
+}
+
+.hero-text {
+  color: var(--muted);
+  max-width: 510px;
+  line-height: 1.7;
+  font-size: 17px;
+  margin: 0;
+}
+
+/* =========================
+   SEARCH
+   ========================= */
+
+.search-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 16px 42px rgba(55, 43, 84, 0.075);
+  margin-top: 30px;
+}
+
+.search-field,
+.location-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #a09aaa;
+  padding: 12px;
+}
+
+.search-field {
+  flex: 1;
+}
+
+.search-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: transparent;
+}
+
+.search-field input::placeholder {
+  color: #aaa4b3;
+}
+
+.location-field {
+  border-left: 1px solid var(--line);
+  color: #726b7d;
+  white-space: nowrap;
+}
+
+.lavender-btn {
+  background: var(--lavender);
+  color: white;
+  border-radius: 12px;
+  padding: 12px 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 8px 20px rgba(154, 134, 216, 0.2);
+}
+
+.lavender-btn:hover {
+  background: var(--lavender-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(125, 104, 194, 0.24);
+}
+
+.search-btn {
+  height: 46px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* =========================
+   TRUST
+   ========================= */
+
+.trust-row {
+  display: flex;
+  gap: 22px;
+  margin-top: 19px;
+  color: #8b8595;
+  font-size: 12px;
+}
+
+.trust-row span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.trust-row svg {
+  color: var(--lavender);
+}
+
+/* =========================
+   HERO IMAGE
+   ========================= */
+
+.hero-visual {
+  position: relative;
+  min-height: 500px;
+}
+
+.hero-photo {
+  height: 500px;
+  border-radius: 32px;
+  overflow: hidden;
+  transform: rotate(1deg);
+  box-shadow: 0 26px 70px rgba(62, 48, 91, 0.14);
+  background: #eeeafb;
+}
+
+.hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* =========================
+   FLOATING AI CARDS
+   ========================= */
+
+.floating-card {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px rgba(47, 38, 66, 0.11);
+  border-radius: 16px;
+}
+
+.ai-card {
+  left: -24px;
+  top: 48px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 16px;
+}
+
+.ai-card b {
+  color: var(--lavender-dark);
+  font-size: 13px;
+}
+
+.ai-card small {
+  display: block;
+  color: var(--muted);
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.ai-icon,
+.ai-large-icon {
+  background: var(--lavender-soft);
+  color: var(--lavender-dark);
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.ai-icon {
+  width: 35px;
+  height: 35px;
+}
+
+.rating-card {
+  right: -16px;
+  bottom: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 15px;
+  color: var(--lavender-dark);
+}
+
+.rating-card svg {
+  color: var(--lavender);
+}
+
+.rating-card b {
+  color: var(--ink);
+}
+
+.rating-card span {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 3px;
+}
