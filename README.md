@@ -1,2 +1,1 @@
-# beauty-ai-platform
-
+# beauty-ai-platform-beta

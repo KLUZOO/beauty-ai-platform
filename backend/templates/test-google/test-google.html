@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Google Sign-In Test</title>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<h2>Google Sign-In Test</h2>
+
+<div id="g_id_onload"
+     data-client_id="136485800268-6lrfcd7uh3g14jhaspul8k2n8rpnm8o6.apps.googleusercontent.com"
+     data-callback="handleCredentialResponse"
+     data-auto_prompt="false">
+</div>
+
+<div class="g_id_signin"
+     data-type="standard"
+     data-theme="outline"
+     data-size="large">
+</div>
+
+<h3>JWT Token</h3>
+<textarea id="token" rows="8" cols="120" readonly></textarea>
+
+<h3>Status</h3>
+<pre id="status"></pre>
+
+<script>
+
+function log(message) {
+    console.log(message);
+    document.getElementById("status").textContent += message + "\n";
+}
+
+function handleCredentialResponse(response) {
+
+    log("✅ Callback called");
+
+    console.log("Full response:", response);
+
+    console.log("JWT:", response.credential);
+
+    document.getElementById("token").value = response.credential;
+}
+
+window.onload = function () {
+
+    log("Page loaded");
+
+    google.accounts.id.prompt(function(notification) {
+
+        console.log(notification);
+
+        if (notification.isNotDisplayed()) {
+            log("Not displayed: " + notification.getNotDisplayedReason());
+        }
+
+        if (notification.isSkippedMoment()) {
+            log("Skipped: " + notification.getSkippedReason());
+        }
+
+        if (notification.isDismissedMoment()) {
+            log("Dismissed: " + notification.getDismissedReason());
+        }
+
+    });
+
+};
+
+</script>
+
+</body>
+</html>

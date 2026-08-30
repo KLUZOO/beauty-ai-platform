@@ -9,9 +9,6 @@
     "preview": "vite preview"
   },
 
-
-
-  
   "dependencies": {
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
@@ -31,9 +28,3 @@
     "esbuild@0.25.12": true
   }
 }
-
-
-
-
-
-
