@@ -2170,6 +2170,13 @@ export default function App() {
     const loadHomeData = async () => {
       setReviewsLoading(true);
       setReviewsError(null);
+
+      if (!user) {
+        setLiveHomeData({});
+        setReviewsLoading(false);
+        return;
+      }
+
       const [salonsResult, servicesResult, mastersResult, promotionsResult, reviewsResult] = await Promise.allSettled([
         apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>("/api/salons/?ordering=-rating&page=1"),
         apiRequest<{ results?: ApiService[] } | ApiService[]>("/api/services/?page=1"),
