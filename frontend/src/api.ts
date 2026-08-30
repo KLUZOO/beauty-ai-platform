@@ -1,6 +1,6 @@
 const API_BASE_URL = import.meta.env.DEV
   ? ""
-  : (import.meta.env.VITE_API_BASE_URL || "https://beautyaiservice.polandcentral.cloudapp.azure.com");
+  : (import.meta.env.VITE_API_BASE_URL || "http://beautyaiservice.polandcentral.cloudapp.azure.com");
 
 const AUTH_TOKENS_KEY = "beautyai_auth_tokens";
 
