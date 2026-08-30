@@ -10,6 +10,7 @@ import {
   apiRequest,
   apiResults,
   clearTokens,
+  getAccessToken,
   getMe,
   login,
   register,
@@ -18,6 +19,7 @@ import {
   type ApiReview,
   type ApiSalon,
   type ApiService,
+  type ApiUserProfile,
 } from "./api";
 
 type CardData = {
@@ -320,6 +322,18 @@ function resolveRoleFromProfile(profile: any): AuthRole {
   return "client";
 }
 
+function profileToMockUser(profile: ApiUserProfile, lang: Lang, fallbackEmail = ""): MockUser {
+  const role = resolveRoleFromProfile(profile);
+  const name = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
+
+  return {
+    name: name || (lang === "ua" ? "Beauty AI користувач" : "Beauty AI user"),
+    email: profile.email || fallbackEmail,
+    role,
+    avatar: profile.photo || roleAvatars[role],
+  };
+}
+
 function AuthModal({
   lang,
   onClose,
@@ -379,16 +393,10 @@ function AuthModal({
     setAuthError(null);
     setAuthLoading(true);
     try {
-      await login(email, password);
+      const normalizedEmail = email.trim();
+      await login(normalizedEmail, password);
       const profile = await getMe();
-      const authRole = resolveRoleFromProfile(profile);
-
-      onAuthenticated({
-        name: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || (ua ? "Beauty AI користувач" : "Beauty AI user"),
-        email: profile.email || email,
-        role: authRole,
-        avatar: profile.photo || roleAvatars[authRole],
-      });
+      onAuthenticated(profileToMockUser(profile, lang, normalizedEmail));
     } catch (err: any) {
       setAuthError(err.message || (ua ? "Сталася помилка. Спробуйте ще раз." : "Something went wrong. Try again."));
     } finally {
@@ -409,14 +417,7 @@ function AuthModal({
       });
       await login(email.trim(), password);
       const profile = await getMe();
-      const authRole = resolveRoleFromProfile(profile);
-
-      onAuthenticated({
-        name: `${profile.first_name ?? firstName} ${profile.last_name ?? lastName}`.trim() || (ua ? "Beauty AI користувач" : "Beauty AI user"),
-        email: profile.email || email,
-        role: authRole,
-        avatar: profile.photo || roleAvatars[authRole],
-      });
+      onAuthenticated(profileToMockUser(profile, lang, email.trim()));
     } catch (err: any) {
       setAuthError(err.message || (ua ? "Не вдалося створити акаунт" : "Could not create account"));
     } finally {
@@ -2126,6 +2127,7 @@ export default function App() {
   const [partnerChoiceOpen, setPartnerChoiceOpen] = useState(false);
   const [user, setUser] = useState<MockUser | null>(null);
   const [view, setView] = useState<AppView>("home");
+  const [authRestoring, setAuthRestoring] = useState(() => Boolean(getAccessToken()));
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [recommendationFiltersOpen, setRecommendationFiltersOpen] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState<SelectedMapLocation | null>(null);
@@ -2138,6 +2140,29 @@ export default function App() {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
   const t = dict[lang];
+
+  useEffect(() => {
+    if (!getAccessToken()) return;
+
+    let cancelled = false;
+
+    void getMe()
+      .then((profile) => {
+        if (cancelled) return;
+        setUser(profileToMockUser(profile, lang));
+        setView("dashboard");
+      })
+      .catch(() => {
+        if (!cancelled) clearAuthTokens();
+      })
+      .finally(() => {
+        if (!cancelled) setAuthRestoring(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -2197,6 +2222,14 @@ export default function App() {
       cancelled = true;
     };
   }, [user?.email]);
+
+  if (authRestoring) {
+    return (
+      <div className="app auth-session-loading" role="status" aria-live="polite">
+        {lang === "ua" ? "Відновлюємо сесію…" : "Restoring your session…"}
+      </div>
+    );
+  }
 
   const liveSalons = liveHomeData.salons ?? recommendations;
   const liveMasters = liveHomeData.masters ?? soloMastersRecommendations;
