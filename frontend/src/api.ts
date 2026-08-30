@@ -66,6 +66,16 @@ export type ApiPromotion = {
   salon: number;
 };
 
+export type ApiReview = {
+  id: number;
+  appointment: number;
+  client: number;
+  master: number;
+  rating: number;
+  comment?: string | null;
+  created_at: string;
+};
+
 export type ApiAppointment = {
   id: number;
   client?: number;

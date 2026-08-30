@@ -15,6 +15,7 @@ import {
   register,
   type ApiMaster,
   type ApiPromotion,
+  type ApiReview,
   type ApiSalon,
   type ApiService,
 } from "./api";
@@ -1875,6 +1876,169 @@ function PanelCarouselSection({
   );
 }
 
+function formatReviewDate(value: string, lang: Lang) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(lang === "ua" ? "uk-UA" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function ReviewsSection({
+  reviews,
+  loading,
+  error,
+  lang,
+}: {
+  reviews: ApiReview[];
+  loading: boolean;
+  error: string | null;
+  lang: Lang;
+}) {
+  const [selectedReview, setSelectedReview] = useState<ApiReview | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+
+  const openReview = async (reviewId: number) => {
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const detail = await apiRequest<ApiReview>(`/api/reviews/${reviewId}/`, {}, true, false);
+      setSelectedReview(detail);
+    } catch (requestError) {
+      setDetailError(requestError instanceof Error ? requestError.message : "Could not load review");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <section className="section reviews-section" id="reviews">
+        <div className="section-head reviews-section-head">
+          <div>
+            <h2 className="section-title">
+              <span className="accent">★</span>
+              {lang === "ua" ? "Відгуки клієнтів" : "Customer reviews"}
+            </h2>
+            <p className="section-sub">
+              {lang === "ua" ? "Реальні оцінки клієнтів Beauty AI" : "Real ratings from Beauty AI customers"}
+            </p>
+          </div>
+          {!loading && !error && (
+            <span className="results-badge">
+              {reviews.length} {lang === "ua" ? "відгуків" : "reviews"}
+            </span>
+          )}
+        </div>
+
+        {loading && (
+          <div className="reviews-state">
+            {lang === "ua" ? "Завантажуємо відгуки…" : "Loading reviews…"}
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="reviews-state reviews-state-error">
+            {lang === "ua"
+              ? "Не вдалося завантажити відгуки з сервера."
+              : "Could not load reviews from the server."}
+          </div>
+        )}
+
+        {!loading && !error && reviews.length === 0 && (
+          <div className="reviews-state">
+            {lang === "ua" ? "Поки що відгуків немає." : "There are no reviews yet."}
+          </div>
+        )}
+
+        {!loading && !error && reviews.length > 0 && (
+          <div className="reviews-grid">
+            {reviews.map((review) => (
+              <button
+                type="button"
+                className="review-card"
+                key={review.id}
+                onClick={() => void openReview(review.id)}
+                aria-label={lang === "ua" ? `Відкрити відгук ${review.id}` : `Open review ${review.id}`}
+              >
+                <div className="review-card-topline">
+                  <span className="review-stars" aria-label={`${review.rating} / 5`}>
+                    {"★".repeat(Math.max(0, Math.min(5, review.rating)))}
+                    <span className="review-stars-muted">
+                      {"★".repeat(Math.max(0, 5 - Math.min(5, review.rating)))}
+                    </span>
+                  </span>
+                  <time dateTime={review.created_at}>
+                    {formatReviewDate(review.created_at, lang)}
+                  </time>
+                </div>
+                <p className="review-comment">
+                  {review.comment || (lang === "ua" ? "Без коментаря" : "No comment")}
+                </p>
+                <span className="review-card-meta">
+                  {lang === "ua" ? `Майстер #${review.master}` : `Master #${review.master}`}
+                  <span aria-hidden="true">→</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {detailLoading && (
+        <div className="review-modal-backdrop" role="presentation">
+          <div className="review-modal-window" role="dialog" aria-modal="true" aria-label="Review">
+            <div className="reviews-state">{lang === "ua" ? "Завантаження…" : "Loading…"}</div>
+          </div>
+        </div>
+      )}
+
+      {detailError && !detailLoading && (
+        <div className="review-modal-backdrop" role="presentation" onMouseDown={() => setDetailError(null)}>
+          <div className="review-modal-window review-modal-error" role="alert" onMouseDown={(event) => event.stopPropagation()}>
+            <button type="button" className="review-modal-close" onClick={() => setDetailError(null)} aria-label="Close">
+              ×
+            </button>
+            <p>{lang === "ua" ? "Не вдалося завантажити деталі відгуку." : "Could not load review details."}</p>
+          </div>
+        </div>
+      )}
+
+      {selectedReview && !detailLoading && (
+        <div className="review-modal-backdrop" role="presentation" onMouseDown={() => setSelectedReview(null)}>
+          <div className="review-modal-window" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <button type="button" className="review-modal-close" onClick={() => setSelectedReview(null)} aria-label="Close">
+              ×
+            </button>
+            <span className="about-kicker">✦ BEAUTY AI</span>
+            <div className="review-modal-rating">
+              <span className="review-stars" aria-label={`${selectedReview.rating} / 5`}>
+                {"★".repeat(Math.max(0, Math.min(5, selectedReview.rating)))}
+                <span className="review-stars-muted">
+                  {"★".repeat(Math.max(0, 5 - Math.min(5, selectedReview.rating)))}
+                </span>
+              </span>
+              <time dateTime={selectedReview.created_at}>
+                {formatReviewDate(selectedReview.created_at, lang)}
+              </time>
+            </div>
+            <p className="review-modal-comment">
+              {selectedReview.comment || (lang === "ua" ? "Без коментаря" : "No comment")}
+            </p>
+            <div className="review-modal-meta">
+              <span>{lang === "ua" ? `Запис #${selectedReview.appointment}` : `Appointment #${selectedReview.appointment}`}</span>
+              <span>{lang === "ua" ? `Майстер #${selectedReview.master}` : `Master #${selectedReview.master}`}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 const apiImageFallbacks = [
   "https://images.pexels.com/photos/7750114/pexels-photo-7750114.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
   "https://images.pexels.com/photos/7195808/pexels-photo-7195808.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
@@ -1969,18 +2133,24 @@ export default function App() {
     salons?: CardData[];
     masters?: CardData[];
     promotions?: PartnerOffer[];
+    reviews?: ApiReview[];
   }>({});
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
   const t = dict[lang];
 
   useEffect(() => {
     let cancelled = false;
 
     const loadHomeData = async () => {
-      const [salonsResult, servicesResult, mastersResult, promotionsResult] = await Promise.allSettled([
+      setReviewsLoading(true);
+      setReviewsError(null);
+      const [salonsResult, servicesResult, mastersResult, promotionsResult, reviewsResult] = await Promise.allSettled([
         apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>("/api/salons/?ordering=-rating&page=1"),
         apiRequest<{ results?: ApiService[] } | ApiService[]>("/api/services/?page=1"),
         apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>("/api/users/masters/?ordering=-rating&page=1"),
         apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>("/api/promotions/?active=true&page=1"),
+        apiRequest<{ results?: ApiReview[] } | ApiReview[]>("/api/reviews/?page=1", {}, true, false),
       ]);
 
       if (cancelled) return;
@@ -1989,7 +2159,13 @@ export default function App() {
       const services = servicesResult.status === "fulfilled" ? apiResults(servicesResult.value) : [];
       const masters = mastersResult.status === "fulfilled" ? apiResults(mastersResult.value) : [];
       const promotions = promotionsResult.status === "fulfilled" ? apiResults(promotionsResult.value) : [];
+      const reviews = reviewsResult.status === "fulfilled" ? apiResults(reviewsResult.value) : [];
       const serviceNamesBySalon = new Map<number, string[]>();
+
+      setReviewsLoading(false);
+      if (reviewsResult.status === "rejected") {
+        setReviewsError(reviewsResult.reason instanceof Error ? reviewsResult.reason.message : "Reviews request failed");
+      }
 
       (services as ApiService[]).forEach((service) => {
         (service.salons ?? []).forEach((salon) => {
@@ -2012,6 +2188,7 @@ export default function App() {
         ...(promotionsResult.status === "fulfilled"
           ? { promotions: promotions.map((promotion, index) => apiPromotionToOffer(promotion as ApiPromotion, salonNames.get((promotion as ApiPromotion).salon) ?? "", index)) }
           : {}),
+        ...(reviewsResult.status === "fulfilled" ? { reviews: reviews as ApiReview[] } : {}),
       });
     };
 
@@ -2024,6 +2201,7 @@ export default function App() {
   const liveSalons = liveHomeData.salons ?? recommendations;
   const liveMasters = liveHomeData.masters ?? soloMastersRecommendations;
   const livePromotions = liveHomeData.promotions ?? partners;
+  const liveReviews = liveHomeData.reviews ?? [];
   const filteredRecommendations = liveSalons.filter((card) =>
     matchesCommonFilters(card, filters, activeCategory, searchQuery),
   );
@@ -2330,6 +2508,13 @@ export default function App() {
         resultsWord={lang === "ua" ? "новинок знайдено" : "new listings"}
         id="fresh"
         onLocationClick={handleLocationClick}
+      />
+
+      <ReviewsSection
+        reviews={liveReviews}
+        loading={reviewsLoading}
+        error={reviewsError}
+        lang={lang}
       />
       
       <section className="about-section" id="about">
