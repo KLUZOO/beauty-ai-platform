@@ -111,6 +111,35 @@ export type ApiFavoriteMaster = {
   active_services?: Array<{ id: number; name: string }>;
 };
 
+export type PaymentMethod = "cash" | "card" | "apple_pay" | "google_pay";
+export type PaymentStatus = "pending" | "completed" | "failed" | "cancelled" | "refunded";
+
+export type ApiPayment = {
+  id: number;
+  appointment: number;
+  amount: string | number;
+  currency?: string;
+  payment_method: PaymentMethod;
+  payment_method_display?: string;
+  payment_status?: PaymentStatus;
+  payment_status_display?: string;
+  payment_date?: string;
+};
+
+export type ApiReferralEvent = {
+  id: number;
+  client?: number | null;
+  session_id: string;
+  salon: number;
+  service?: number | null;
+  source: string;
+  destination_url: string;
+  created_at?: string;
+  event_type: string;
+};
+
+type ApiCollection<T> = T[] | { results?: T[] };
+
 function readTokens(): AuthTokens | null {
   try {
     const raw = localStorage.getItem(AUTH_TOKENS_KEY);
@@ -214,6 +243,140 @@ export async function verifyEmail(id: string, token: string) {
 
 export async function getMe() {
   return apiRequest<ApiUserProfile>("/api/users/me/");
+}
+
+export async function listPayments(page = 1) {
+  const payload = await apiRequest<ApiCollection<ApiPayment>>(`/api/payments/?page=${page}`);
+  return apiResults(payload);
+}
+
+export type PaymentPayload = {
+  appointment: number;
+  amount: string;
+  currency: string;
+  payment_method: PaymentMethod;
+  payment_status?: PaymentStatus;
+};
+
+export async function createPayment(payload: PaymentPayload) {
+  return apiRequest<ApiPayment>("/api/payments/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPayment(id: number) {
+  return apiRequest<ApiPayment>(`/api/payments/${id}/`);
+}
+
+export async function updatePayment(id: number, payload: PaymentPayload) {
+  return apiRequest<ApiPayment>(`/api/payments/${id}/`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchPayment(id: number, payload: Partial<PaymentPayload>) {
+  return apiRequest<ApiPayment>(`/api/payments/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePayment(id: number) {
+  return apiRequest<void>(`/api/payments/${id}/`, { method: "DELETE" });
+}
+
+export type PromotionPayload = {
+  name: string;
+  description: string;
+  discount_percent: number;
+  start_date: string;
+  end_date: string;
+  salon: number;
+};
+
+export async function listPromotions(
+  filters: { page?: number; active?: boolean; discount_percent?: number; salon_id?: number } = {},
+) {
+  const params = new URLSearchParams({ page: String(filters.page ?? 1) });
+  if (filters.active !== undefined) params.set("active", String(filters.active));
+  if (filters.discount_percent !== undefined) params.set("discount_percent", String(filters.discount_percent));
+  if (filters.salon_id !== undefined) params.set("salon_id", String(filters.salon_id));
+  const payload = await apiRequest<ApiCollection<ApiPromotion>>(`/api/promotions/?${params.toString()}`);
+  return apiResults(payload);
+}
+
+export async function createPromotion(payload: PromotionPayload) {
+  return apiRequest<ApiPromotion>("/api/promotions/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPromotion(id: number) {
+  return apiRequest<ApiPromotion>(`/api/promotions/${id}/`);
+}
+
+export async function updatePromotion(id: number, payload: PromotionPayload) {
+  return apiRequest<ApiPromotion>(`/api/promotions/${id}/`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchPromotion(id: number, payload: Partial<PromotionPayload>) {
+  return apiRequest<ApiPromotion>(`/api/promotions/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePromotion(id: number) {
+  return apiRequest<void>(`/api/promotions/${id}/`, { method: "DELETE" });
+}
+
+export type ReferralEventPayload = {
+  session_id: string;
+  salon: number;
+  service?: number | null;
+  source: string;
+  destination_url: string;
+  event_type: string;
+};
+
+export async function listReferralEvents(page = 1) {
+  const payload = await apiRequest<ApiCollection<ApiReferralEvent>>(`/api/referral-events/?page=${page}`);
+  return apiResults(payload);
+}
+
+export async function createReferralEvent(payload: ReferralEventPayload) {
+  return apiRequest<ApiReferralEvent>("/api/referral-events/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getReferralEvent(id: number) {
+  return apiRequest<ApiReferralEvent>(`/api/referral-events/${id}/`);
+}
+
+export async function updateReferralEvent(id: number, payload: ReferralEventPayload) {
+  return apiRequest<ApiReferralEvent>(`/api/referral-events/${id}/`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchReferralEvent(id: number, payload: Partial<ReferralEventPayload>) {
+  return apiRequest<ApiReferralEvent>(`/api/referral-events/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteReferralEvent(id: number) {
+  return apiRequest<void>(`/api/referral-events/${id}/`, { method: "DELETE" });
 }
 
 export function clearTokens() {

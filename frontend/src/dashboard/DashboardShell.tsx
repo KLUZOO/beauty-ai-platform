@@ -1,5 +1,6 @@
 import React from "react";
 import "./styles/dashboard.css";
+import "./styles/operations.css";
 import type { AuthRole, Lang, MockUser } from "./types";
 import ClientDashboard from "./client/ClientDashboard";
 import MasterDashboard from "./master/MasterDashboard";
