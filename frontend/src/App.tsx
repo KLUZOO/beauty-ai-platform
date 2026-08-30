@@ -359,6 +359,7 @@ function AuthModal({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [googlePickerOpen, setGooglePickerOpen] = useState(false);
   const [googlePickingRole, setGooglePickingRole] = useState<AuthRole | null>(null);
@@ -391,6 +392,7 @@ function AuthModal({
   // Реальний логін: POST /api/users/token/ (email+password) → JWT access/refresh → GET /api/users/me/ для профілю й ролі
   const loginWithPassword = async () => {
     setAuthError(null);
+    setAuthSuccess(null);
     setAuthLoading(true);
     try {
       const normalizedEmail = email.trim();
@@ -406,18 +408,25 @@ function AuthModal({
 
   const registerWithPassword = async () => {
     setAuthError(null);
+    setAuthSuccess(null);
     setAuthLoading(true);
     try {
+      const normalizedEmail = email.trim();
       await register({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         phone: phone.trim(),
       });
-      await login(email.trim(), password);
-      const profile = await getMe();
-      onAuthenticated(profileToMockUser(profile, lang, email.trim()));
+      setEmail(normalizedEmail);
+      setPassword("");
+      setMode("login");
+      setAuthSuccess(
+        ua
+          ? "Акаунт створено. Якщо потрібно підтвердити email, перевірте пошту, а потім увійдіть."
+          : "Your account was created. If email verification is required, check your inbox, then sign in.",
+      );
     } catch (err: any) {
       setAuthError(err.message || (ua ? "Не вдалося створити акаунт" : "Could not create account"));
     } finally {
@@ -483,10 +492,26 @@ function AuthModal({
         </div>
 
         <div className="auth-tabs" role="tablist">
-          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => setMode("login")}>
+          <button
+            className={mode === "login" ? "active" : ""}
+            type="button"
+            onClick={() => {
+              setAuthError(null);
+              setAuthSuccess(null);
+              setMode("login");
+            }}
+          >
             {ua ? "Увійти" : "Sign in"}
           </button>
-          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => setMode("register")}>
+          <button
+            className={mode === "register" ? "active" : ""}
+            type="button"
+            onClick={() => {
+              setAuthError(null);
+              setAuthSuccess(null);
+              setMode("register");
+            }}
+          >
             {ua ? "Реєстрація" : "Register"}
           </button>
         </div>
@@ -562,6 +587,7 @@ function AuthModal({
           )}
 
           {authError && <p className="auth-google-error">{authError}</p>}
+          {authSuccess && <p className="auth-success">{authSuccess}</p>}
 
           <button className="auth-primary" type="submit" disabled={authLoading}>
             {mode === "login"
