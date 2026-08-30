@@ -139,18 +139,23 @@ async function refreshAccessToken(refresh: string) {
   return tokens.access;
 }
 
-export async function apiRequest<T = unknown>(path: string, init: RequestInit = {}, canRetry = true): Promise<T> {
+export async function apiRequest<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+  canRetry = true,
+  includeAuth = true,
+): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type") && init.body) headers.set("Content-Type", "application/json");
-  const access = getAccessToken();
+  const access = includeAuth ? getAccessToken() : null;
   if (access) headers.set("Authorization", `Bearer ${access}`);
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
-  if (response.status === 401 && canRetry) {
+  if (response.status === 401 && canRetry && includeAuth) {
     const tokens = readTokens();
     if (tokens?.refresh) {
       const nextAccess = await refreshAccessToken(tokens.refresh);
-      if (nextAccess) return apiRequest<T>(path, init, false);
+      if (nextAccess) return apiRequest<T>(path, init, false, includeAuth);
     }
   }
 
@@ -172,7 +177,7 @@ export async function login(email: string, password: string) {
   const tokens = await apiRequest<AuthTokens>("/api/users/token/", {
     method: "POST",
     body: JSON.stringify({ email, password }),
-  });
+  }, true, false);
   writeTokens(tokens);
   return tokens;
 }
@@ -187,7 +192,7 @@ export async function register(payload: {
   return apiRequest<ApiUserProfile>("/api/users/register/", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, true, false);
 }
 
 export async function getMe() {

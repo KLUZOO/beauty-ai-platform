@@ -400,13 +400,13 @@ function AuthModal({
     setAuthLoading(true);
     try {
       await register({
-        email,
+        email: email.trim(),
         password,
-        first_name: firstName,
-        last_name: lastName,
-        phone,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim(),
       });
-      await login(email, password);
+      await login(email.trim(), password);
       const profile = await getMe();
       const authRole = resolveRoleFromProfile(profile);
 
@@ -543,7 +543,14 @@ function AuthModal({
           </label>
           <label>
             <span>{ua ? "Пароль" : "Password"}</span>
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" required />
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              minLength={mode === "register" ? 5 : undefined}
+              required
+            />
           </label>
 
           {mode === "login" && (
