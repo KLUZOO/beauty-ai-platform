@@ -20,6 +20,7 @@ import {
   type ApiSalon,
   type ApiService,
   type ApiUserProfile,
+  verifyEmail,
 } from "./api";
 
 type CardData = {
@@ -334,6 +335,17 @@ function profileToMockUser(profile: ApiUserProfile, lang: Lang, fallbackEmail = 
   };
 }
 
+function getAuthErrorMessage(error: unknown, lang: Lang, fallback: string) {
+  const message = error instanceof Error ? error.message : "";
+  if (message.toLowerCase().includes("no active account")) {
+    return lang === "ua"
+      ? "Акаунт ще не активний. Підтвердіть email у листі від Beauty AI, а потім спробуйте увійти ще раз."
+      : "Your account is not active yet. Confirm your email using the Beauty AI message, then try signing in again.";
+  }
+  if (/^api request failed \(\d+\)$/i.test(message)) return fallback;
+  return message || fallback;
+}
+
 function AuthModal({
   lang,
   onClose,
@@ -341,6 +353,8 @@ function AuthModal({
   initialMode = "login",
   initialRole = "client",
   initialPartnerKind,
+  initialError,
+  initialSuccess,
 }: {
   lang: Lang;
   onClose: () => void;
@@ -348,6 +362,8 @@ function AuthModal({
   initialMode?: "login" | "register";
   initialRole?: Exclude<AuthRole, "admin">;
   initialPartnerKind?: "solo" | "salon";
+  initialError?: string | null;
+  initialSuccess?: string | null;
 }) {
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [role, setRole] = useState<Exclude<AuthRole, "admin">>(initialRole);
@@ -358,8 +374,8 @@ function AuthModal({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(initialError ?? null);
+  const [authSuccess, setAuthSuccess] = useState<string | null>(initialSuccess ?? null);
   const [authLoading, setAuthLoading] = useState(false);
   const [googlePickerOpen, setGooglePickerOpen] = useState(false);
   const [googlePickingRole, setGooglePickingRole] = useState<AuthRole | null>(null);
@@ -400,7 +416,7 @@ function AuthModal({
       const profile = await getMe();
       onAuthenticated(profileToMockUser(profile, lang, normalizedEmail));
     } catch (err: any) {
-      setAuthError(err.message || (ua ? "Сталася помилка. Спробуйте ще раз." : "Something went wrong. Try again."));
+      setAuthError(getAuthErrorMessage(err, lang, ua ? "Сталася помилка. Спробуйте ще раз." : "Something went wrong. Try again."));
     } finally {
       setAuthLoading(false);
     }
@@ -428,7 +444,7 @@ function AuthModal({
           : "Your account was created. If email verification is required, check your inbox, then sign in.",
       );
     } catch (err: any) {
-      setAuthError(err.message || (ua ? "Не вдалося створити акаунт" : "Could not create account"));
+      setAuthError(getAuthErrorMessage(err, lang, ua ? "Не вдалося створити акаунт" : "Could not create account"));
     } finally {
       setAuthLoading(false);
     }
@@ -533,16 +549,16 @@ function AuthModal({
               <div className="auth-form-row">
                 <label>
                   <span>{ua ? "Ім'я" : "First name"}</span>
-                  <input type="text" value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
+                <input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
                 </label>
                 <label>
                   <span>{ua ? "Прізвище" : "Last name"}</span>
-                  <input type="text" value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+                <input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} required />
                 </label>
               </div>
               <label>
                 <span>{ua ? "Телефон" : "Phone"}</span>
-                <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required />
+                <input type="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required />
               </label>
             </>
           )}
@@ -566,12 +582,13 @@ function AuthModal({
 
           <label>
             <span>Email</span>
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required />
+            <input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required />
           </label>
           <label>
             <span>{ua ? "Пароль" : "Password"}</span>
             <input
               type="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
@@ -2154,6 +2171,8 @@ export default function App() {
   const [user, setUser] = useState<MockUser | null>(null);
   const [view, setView] = useState<AppView>("home");
   const [authRestoring, setAuthRestoring] = useState(() => Boolean(getAccessToken()));
+  const [verificationNotice, setVerificationNotice] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [recommendationFiltersOpen, setRecommendationFiltersOpen] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState<SelectedMapLocation | null>(null);
@@ -2183,6 +2202,52 @@ export default function App() {
       })
       .finally(() => {
         if (!cancelled) setAuthRestoring(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verificationId = params.get("id");
+    const verificationToken = params.get("token");
+    if (!verificationId || !verificationToken) return;
+
+    let cancelled = false;
+    setVerificationNotice(null);
+    setVerificationError(null);
+
+    void verifyEmail(verificationId, verificationToken)
+      .then(() => {
+        if (cancelled) return;
+        setAuthIntent({ mode: "login", role: "client" });
+        setVerificationNotice(
+          lang === "ua"
+            ? "Email підтверджено. Тепер увійдіть у свій акаунт."
+            : "Your email is verified. You can now sign in.",
+        );
+        setAuthOpen(true);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setVerificationError(
+          getAuthErrorMessage(
+            error,
+            lang,
+            lang === "ua"
+              ? "Не вдалося підтвердити email. Посилання може бути недійсним або вже використаним."
+              : "We could not verify your email. The link may be invalid or already used.",
+          ),
+        );
+        setAuthIntent({ mode: "login", role: "client" });
+        setAuthOpen(true);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       });
 
     return () => {
@@ -2669,11 +2734,17 @@ export default function App() {
       {authOpen && (
         <AuthModal
           lang={lang}
-          onClose={() => setAuthOpen(false)}
+          onClose={() => {
+            setAuthOpen(false);
+            setVerificationNotice(null);
+            setVerificationError(null);
+          }}
           onAuthenticated={handleAuthenticated}
           initialMode={authIntent.mode}
           initialRole={authIntent.role}
           initialPartnerKind={authIntent.partnerKind}
+          initialError={verificationError}
+          initialSuccess={verificationNotice}
         />
       )}
 

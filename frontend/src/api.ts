@@ -205,6 +205,13 @@ export async function register(payload: {
   }, true, false);
 }
 
+export async function verifyEmail(id: string, token: string) {
+  return apiRequest<void>("/api/users/verify-email/", {
+    method: "POST",
+    body: JSON.stringify({ id, token }),
+  }, true, false);
+}
+
 export async function getMe() {
   return apiRequest<ApiUserProfile>("/api/users/me/");
 }
