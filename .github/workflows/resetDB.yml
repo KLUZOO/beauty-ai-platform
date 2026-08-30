@@ -27,7 +27,7 @@ jobs:
           --command-id RunShellScript \
           --scripts "sudo /home/developer/flushdb.sh"
 
-    - name: Create Djangosuperuser
+    - name: Initialize data
       run: |
         az vm run-command invoke \
           --resource-group beauty-app-rg \
