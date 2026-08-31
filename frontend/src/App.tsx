@@ -15,6 +15,7 @@ import {
   login,
   register,
   createAppointment,
+  getSalon,
   type ApiMaster,
   type ApiPromotion,
   type ApiReview,
@@ -757,6 +758,7 @@ function Card({
   hideReason = false,
   onLocationClick,
   onBookClick,
+  onSalonDetailsClick,
 }: {
   data: CardData;
   t: Translations;
@@ -764,6 +766,7 @@ function Card({
   hideReason?: boolean;
   onLocationClick?: (name: string, district: string, distance: string) => void;
   onBookClick?: (data: CardData) => void;
+  onSalonDetailsClick?: (salonId: number) => void;
 }) {
   const [showReason, setShowReason] = useState(false);
   const isSolo = data.variant === "solo";
@@ -848,9 +851,19 @@ function Card({
 
         <div className="card-cta-row">
           <button className="cta-btn" type="button" onClick={() => onBookClick?.(data)}>{t.cta}</button>
-          <a className="view-link" href="#">
-            {data.profileLinkLabel ?? t.viewSalon} →
-          </a>
+          {!isSolo && data.id && onSalonDetailsClick ? (
+            <button
+              className="view-link view-link-button"
+              type="button"
+              onClick={() => onSalonDetailsClick(data.id as number)}
+            >
+              {data.profileLinkLabel ?? t.viewSalon} →
+            </button>
+          ) : (
+            <a className="view-link" href="#">
+              {data.profileLinkLabel ?? t.viewSalon} →
+            </a>
+          )}
         </div>
 
         {data.why && !hideReason && (
@@ -1391,12 +1404,14 @@ function RecommendationCarousel({
   variant,
   onLocationClick,
   onBookClick,
+  onSalonDetailsClick,
 }: {
   cards: CardData[];
   t: Translations;
   variant: "salons" | "masters" | "nearby" | "worth-trying" | "fresh";
   onLocationClick?: (name: string, district: string, distance: string) => void;
   onBookClick?: (data: CardData) => void;
+  onSalonDetailsClick?: (salonId: number) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -1475,6 +1490,7 @@ function RecommendationCarousel({
             hideReason
             onLocationClick={onLocationClick}
             onBookClick={onBookClick}
+            onSalonDetailsClick={onSalonDetailsClick}
           />
         )) : <p className="empty-results">{t.noResults}</p>}
       </div>
@@ -1758,10 +1774,12 @@ function KyivTopSection({
   cards,
   lang,
   onLocationClick,
+  onSalonDetailsClick,
 }: {
   cards: CardData[];
   lang: Lang;
   onLocationClick?: (name: string, district: string, distance: string) => void;
+  onSalonDetailsClick?: (salonId: number) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -1879,7 +1897,17 @@ function KyivTopSection({
 
                   <div className="kyiv-cover-footer">
                     <span className="kyiv-cover-price">{ua ? "від" : "from"} {card.priceFrom} грн</span>
-                    <span className="kyiv-cover-view">{ua ? "Профіль" : "Profile"} →</span>
+                    {!card.variant && card.id && onSalonDetailsClick ? (
+                      <button
+                        type="button"
+                        className="kyiv-cover-view kyiv-cover-view-button"
+                        onClick={() => onSalonDetailsClick(card.id as number)}
+                      >
+                        {ua ? "Профіль" : "Profile"} →
+                      </button>
+                    ) : (
+                      <span className="kyiv-cover-view">{ua ? "Профіль" : "Profile"} →</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1909,6 +1937,7 @@ function PanelCarouselSection({
   resultsWord,
   id,
   onLocationClick,
+  onSalonDetailsClick,
 }: {
   title: string;
   subtitle: string;
@@ -1920,6 +1949,7 @@ function PanelCarouselSection({
   resultsWord: string;
   id?: string;
   onLocationClick?: (name: string, district: string, distance: string) => void;
+  onSalonDetailsClick?: (salonId: number) => void;
 }) {
   return (
     <section className="section subtle-panel-section" id={id}>
@@ -1934,7 +1964,13 @@ function PanelCarouselSection({
           {cards.length} {resultsWord}
         </span>
       </div>
-      <RecommendationCarousel cards={cards} t={t} variant={variant} onLocationClick={onLocationClick} />
+      <RecommendationCarousel
+        cards={cards}
+        t={t}
+        variant={variant}
+        onLocationClick={onLocationClick}
+        onSalonDetailsClick={onSalonDetailsClick}
+      />
     </section>
   );
 }
@@ -2142,6 +2178,140 @@ function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number):
     mastersCount: salon.masters_count ? `${salon.masters_count} майстрів` : undefined,
     locationNote: address,
   };
+}
+
+function SalonDetailsModal({
+  salonId,
+  lang,
+  onClose,
+}: {
+  salonId: number;
+  lang: Lang;
+  onClose: () => void;
+}) {
+  const [salon, setSalon] = useState<ApiSalon | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const ua = lang === "ua";
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setSalon(null);
+
+    void getSalon(salonId)
+      .then((result) => {
+        if (!cancelled) setSalon(result);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setError(requestError instanceof Error ? requestError.message : (ua ? "Не вдалося завантажити салон" : "Could not load salon"));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [salonId, ua]);
+
+  const location = salon?.location;
+  const city = salon?.city || location?.city_name || "";
+  const address = salon?.address || location?.address || city || (ua ? "Адреса не вказана" : "Address unavailable");
+  const district = salon?.district || location?.region || city;
+  const status = normalize(salon?.available_status ?? "");
+  const isAvailable = ["open", "available", "відкрито", "available_now"].some((value) => status.includes(value));
+  const weekdays = ua
+    ? ["", "Понеділок", "Вівторок", "Середа", "Четвер", "П’ятниця", "Субота", "Неділя"]
+    : ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+  return (
+    <div className="salon-details-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <div
+        className="salon-details-modal-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="salon-details-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button type="button" className="salon-details-modal-close" onClick={onClose} aria-label={ua ? "Закрити" : "Close"}>
+          ×
+        </button>
+
+        {loading && <div className="salon-details-state">{ua ? "Завантаження даних салону…" : "Loading salon details…"}</div>}
+
+        {!loading && error && (
+          <div className="salon-details-state salon-details-state-error">
+            <p>{error}</p>
+            <button type="button" className="salon-details-action" onClick={onClose}>{ua ? "Закрити" : "Close"}</button>
+          </div>
+        )}
+
+        {!loading && !error && salon && (
+          <>
+            <div
+              className="salon-details-hero"
+              style={{ ["--salon-details-photo" as string]: `url(${salon.logo || apiImageFallbacks[salon.id % apiImageFallbacks.length]})` }}
+            >
+              <div className="salon-details-hero-shade" />
+              <span className="salon-details-kicker">BEAUTY AI · SALON</span>
+            </div>
+
+            <div className="salon-details-content">
+              <div className="salon-details-title-row">
+                <div>
+                  <span className="about-kicker">✦ {ua ? "ПРО САЛОН" : "ABOUT THE SALON"}</span>
+                  <h2 id="salon-details-title">{salon.name}</h2>
+                </div>
+                <span className={`salon-details-status ${isAvailable ? "is-available" : ""}`}>
+                  {isAvailable ? (ua ? "Доступний" : "Available") : (ua ? "Статус уточнюється" : "Status unavailable")}
+                </span>
+              </div>
+
+              <div className="salon-details-rating">
+                <strong>★ {Number(salon.average_rating ?? 0).toFixed(1)}</strong>
+                <span>{salon.total_reviews ?? 0} {ua ? "відгуків" : "reviews"}</span>
+              </div>
+
+              <div className="salon-details-info">
+                <span>⌖ {address}</span>
+                {district && district !== address && <span>• {district}</span>}
+                {salon.phone && <a href={`tel:${salon.phone}`}>☎ {salon.phone}</a>}
+              </div>
+
+              <div className="salon-details-metrics">
+                <div><strong>{salon.masters_count ?? 0}</strong><span>{ua ? "майстрів" : "masters"}</span></div>
+                <div><strong>{salon.service_count ?? 0}</strong><span>{ua ? "послуг" : "services"}</span></div>
+              </div>
+
+              {salon.description && <p className="salon-details-description">{salon.description}</p>}
+
+              <div className="salon-details-hours">
+                <h3>{ua ? "Графік роботи" : "Working hours"}</h3>
+                {salon.working_hours && salon.working_hours.length > 0 ? (
+                  salon.working_hours.map((schedule) => (
+                    <div className="salon-details-hour-row" key={`${salon.id}-${schedule.weekday}`}>
+                      <span>{schedule.weekday ? weekdays[schedule.weekday] : (ua ? "День" : "Day")}</span>
+                      <span>
+                        {schedule.is_closed
+                          ? (ua ? "Зачинено" : "Closed")
+                          : `${schedule.opening_time?.slice(0, 5) ?? "—"} – ${schedule.closing_time?.slice(0, 5) ?? "—"}`}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="salon-details-muted">{ua ? "Графік роботи ще не вказано" : "Working hours are not available yet"}</p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function apiMasterToCard(master: ApiMaster, index: number): CardData {
@@ -2371,6 +2541,7 @@ export default function App() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [recommendationFiltersOpen, setRecommendationFiltersOpen] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState<SelectedMapLocation | null>(null);
+  const [selectedSalonId, setSelectedSalonId] = useState<number | null>(null);
   const [bookingCard, setBookingCard] = useState<CardData | null>(null);
   const [liveHomeData, setLiveHomeData] = useState<{
     salons?: CardData[];
@@ -2556,6 +2727,10 @@ export default function App() {
       lat: coords[0],
       lng: coords[1],
     });
+  };
+
+  const handleSalonDetailsClick = (salonId: number) => {
+    setSelectedSalonId(salonId);
   };
 
   const handleBookClick = (card: CardData) => {
@@ -2776,7 +2951,14 @@ export default function App() {
             </div>
             <p>{t.sections.recommendations.subtitle}</p>
           </div>
-           <RecommendationCarousel cards={filteredRecommendations} t={t} variant="salons" onLocationClick={handleLocationClick} onBookClick={handleBookClick} />
+           <RecommendationCarousel
+             cards={filteredRecommendations}
+             t={t}
+             variant="salons"
+             onLocationClick={handleLocationClick}
+             onBookClick={handleBookClick}
+             onSalonDetailsClick={handleSalonDetailsClick}
+           />
         </div>
 
         <div className="recommendation-row recommendation-row-masters" id="masters">
@@ -2808,6 +2990,7 @@ export default function App() {
          cards={filteredNearby}
         lang={lang}
         onLocationClick={handleLocationClick}
+         onSalonDetailsClick={handleSalonDetailsClick}
       />
 
       <PanelCarouselSection
@@ -2825,6 +3008,7 @@ export default function App() {
         resultsWord={lang === "ua" ? "варіантів знайдено" : "options found"}
         id="worth-trying"
         onLocationClick={handleLocationClick}
+         onSalonDetailsClick={handleSalonDetailsClick}
       />
 
       <PanelCarouselSection
@@ -2843,6 +3027,7 @@ export default function App() {
         resultsWord={lang === "ua" ? "новинок знайдено" : "new listings"}
         id="fresh"
         onLocationClick={handleLocationClick}
+         onSalonDetailsClick={handleSalonDetailsClick}
       />
 
       <ReviewsSection
@@ -2949,6 +3134,14 @@ export default function App() {
           initialPartnerKind={authIntent.partnerKind}
           initialError={verificationError}
           initialSuccess={verificationNotice}
+        />
+      )}
+
+      {selectedSalonId !== null && (
+        <SalonDetailsModal
+          salonId={selectedSalonId}
+          lang={lang}
+          onClose={() => setSelectedSalonId(null)}
         />
       )}
 

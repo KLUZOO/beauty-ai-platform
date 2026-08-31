@@ -3334,3 +3334,247 @@ more-filters-text-btn {
   background: #fff5f6;
   color: #b23d58;
 }
+
+.salon-details-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 125;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(25, 16, 43, 0.52);
+  backdrop-filter: blur(8px);
+}
+
+.salon-details-modal-window {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(820px, calc(100vh - 44px));
+  overflow-y: auto;
+  border: 1px solid rgba(113, 53, 232, 0.16);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(39, 19, 69, 0.28);
+}
+
+.salon-details-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #6f35db;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.salon-details-hero {
+  position: relative;
+  min-height: 190px;
+  background-image: var(--salon-details-photo);
+  background-position: center;
+  background-size: cover;
+}
+
+.salon-details-hero-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(27, 15, 47, 0.08), rgba(27, 15, 47, 0.68));
+}
+
+.salon-details-kicker {
+  position: absolute;
+  right: 28px;
+  bottom: 24px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.salon-details-content {
+  padding: 28px 32px 34px;
+}
+
+.salon-details-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.salon-details-title-row h2 {
+  margin: 8px 0 0;
+  color: #1b1329;
+  font-size: clamp(25px, 4vw, 34px);
+}
+
+.salon-details-status {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f5f0fa;
+  color: #7c6c8d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.salon-details-status.is-available {
+  background: #eaf9f1;
+  color: #208653;
+}
+
+.salon-details-rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 13px;
+  color: #746681;
+  font-size: 14px;
+}
+
+.salon-details-rating strong {
+  color: #b77900;
+  font-size: 17px;
+}
+
+.salon-details-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 18px;
+  color: #574a68;
+  font-size: 14px;
+}
+
+.salon-details-info a {
+  color: #7135e8;
+  text-decoration: none;
+}
+
+.salon-details-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.salon-details-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #faf7ff;
+}
+
+.salon-details-metrics strong {
+  color: #7135e8;
+  font-size: 22px;
+}
+
+.salon-details-metrics span,
+.salon-details-muted {
+  color: #7f718e;
+  font-size: 13px;
+}
+
+.salon-details-description {
+  margin: 22px 0 0;
+  color: #51455f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.salon-details-hours {
+  margin-top: 26px;
+}
+
+.salon-details-hours h3 {
+  margin: 0 0 10px;
+  color: #2b2038;
+  font-size: 17px;
+}
+
+.salon-details-hour-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 9px 0;
+  border-bottom: 1px solid #eee8f5;
+  color: #5d506d;
+  font-size: 13px;
+}
+
+.salon-details-hour-row span:last-child {
+  color: #302240;
+  font-weight: 700;
+}
+
+.salon-details-state {
+  padding: 64px 32px;
+  color: #6e617d;
+  text-align: center;
+}
+
+.salon-details-state-error {
+  color: #b23d58;
+}
+
+.salon-details-state-error p {
+  margin: 0 0 18px;
+}
+
+.salon-details-action {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #7135e8;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.view-link-button,
+.kyiv-cover-view-button {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.view-link-button {
+  padding: 0;
+  background: transparent;
+}
+
+.kyiv-cover-view-button {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .salon-details-modal-backdrop {
+    padding: 12px;
+  }
+
+  .salon-details-content {
+    padding: 24px 20px 26px;
+  }
+
+  .salon-details-title-row {
+    display: block;
+  }
+
+  .salon-details-status {
+    display: inline-block;
+    margin-top: 12px;
+  }
+}
