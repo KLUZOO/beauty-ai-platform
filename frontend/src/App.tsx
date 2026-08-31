@@ -579,15 +579,6 @@ function AuthModal({
           )}
           {mode === "register" && role === "master" && (
             <>
-              <p className="auth-partner-note">
-                {partnerKind === "salon"
-                  ? ua
-                    ? "Спочатку створимо акаунт. Профіль салону підключається після активації майстра на стороні Beauty AI."
-                    : "First we create your account. Your salon profile is connected after Beauty AI activates the master profile."
-                  : ua
-                    ? "Спочатку створимо акаунт. Профіль майстра потрібно активувати на стороні Beauty AI після підтвердження email."
-                    : "First we create your account. The master profile must be activated by Beauty AI after email verification."}
-              </p>
               {partnerKind === "salon" && (
                 <label>
                   <span>{ua ? "Назва закладу" : "Business name"}</span>
