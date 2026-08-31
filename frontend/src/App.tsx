@@ -2329,9 +2329,11 @@ export default function App() {
     );
   }
 
-  const liveSalons = liveHomeData.salons ?? recommendations;
-  const liveMasters = liveHomeData.masters ?? soloMastersRecommendations;
-  const livePromotions = liveHomeData.promotions ?? partners;
+  // The home page has useful curated content even when the API is unavailable
+  // or has no records yet. Do not replace it with an empty API response.
+  const liveSalons = liveHomeData.salons?.length ? liveHomeData.salons : recommendations;
+  const liveMasters = liveHomeData.masters?.length ? liveHomeData.masters : soloMastersRecommendations;
+  const livePromotions = liveHomeData.promotions?.length ? liveHomeData.promotions : partners;
   const liveReviews = liveHomeData.reviews ?? [];
   const filteredRecommendations = liveSalons.filter((card) =>
     matchesCommonFilters(card, filters, activeCategory, searchQuery),
