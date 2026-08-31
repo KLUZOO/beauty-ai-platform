@@ -273,7 +273,7 @@ export default function ClientDashboard({
             <span className="client-nav-icon">♙</span>{ua ? "Профіль" : "Profile"}
           </button>
           <button type="button" className="client-sidebar-logout-top" onClick={onHome}>
-            <span className="client-nav-icon">↪</span>{ua ? "Вийти" : "Log out"}
+            <span className="client-nav-icon">⌕</span>{ua ? "Пошук майстра" : "Find a master"}
           </button>
         </nav>
 

@@ -2521,9 +2521,9 @@ export default function App() {
     );
   }
 
-  // The home page has useful curated content even when the API is unavailable
-  // or has no records yet. Do not replace it with an empty API response.
-  const liveSalons = liveHomeData.salons?.length ? liveHomeData.salons : recommendations;
+  // Salons shown in the UI must always come from the backend endpoint.
+  // An empty or failed API response stays empty instead of showing demo salons.
+  const liveSalons = liveHomeData.salons ?? [];
   const liveMasters = liveHomeData.masters?.length ? liveHomeData.masters : soloMastersRecommendations;
   const livePromotions = liveHomeData.promotions?.length ? liveHomeData.promotions : partners;
   const liveReviews = liveHomeData.reviews ?? [];
@@ -2536,13 +2536,13 @@ export default function App() {
   const filteredPartners = livePromotions.filter((offer) =>
     matchesPartnerFilters(offer, filters, activeCategory, searchQuery),
   );
-  const filteredNearby = nearby.filter((card) =>
+  const filteredNearby = liveSalons.filter((card) =>
     matchesCommonFilters(card, filters, activeCategory, searchQuery),
   );
-  const filteredTopRated = topRated.filter((card) =>
+  const filteredTopRated = liveSalons.filter((card) =>
     matchesCommonFilters(card, filters, activeCategory, searchQuery),
   );
-  const filteredFresh = fresh.filter((card) =>
+  const filteredFresh = liveSalons.filter((card) =>
     matchesCommonFilters(card, filters, activeCategory, searchQuery),
   );
 
