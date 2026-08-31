@@ -118,55 +118,34 @@ export default function ClientDashboard({
     return value || (ua ? "Наталя" : "Natalia");
   }, [user.name, ua]);
 
-  const demoHistory = [
-    {
-      id: undefined,
-      salon: "Beauty Room",
-      master: ua ? "Ірина Бондар" : "Iryna Bondar",
-      service: ua ? "Манікюр · гель-лак" : "Manicure · gel polish",
-      date: ua ? "27 травня" : "May 27",
-    },
-    {
-      id: undefined,
-      salon: "Perfect Look",
-      master: ua ? "Марія Левченко" : "Maria Levchenko",
-      service: ua ? "Стрижка та укладка" : "Haircut & styling",
-      date: ua ? "9 серпня" : "Aug 9",
-    },
-  ];
+  const history = appointments.map((appointment) => ({
+    id: appointment.id,
+    salon: `Salon #${appointment.salon}`,
+    master: `Master #${appointment.master}`,
+    service: `Service #${appointment.service}`,
+    date: new Date(appointment.start).toLocaleDateString(ua ? "uk-UA" : "en-US", { day: "numeric", month: "short" }),
+  }));
 
-  const history = appointments.length > 0
-    ? appointments.map((appointment) => ({
-        id: appointment.id,
-        salon: `Salon #${appointment.salon}`,
-        master: `Master #${appointment.master}`,
-        service: `Service #${appointment.service}`,
-        date: new Date(appointment.start).toLocaleDateString(ua ? "uk-UA" : "en-US", { day: "numeric", month: "short" }),
-      }))
-    : demoHistory;
-
-  const favoriteMasters = liveFavorites.length > 0
-    ? liveFavorites.map((master) => ({
-        id: master.id,
-        name: master.name,
-        type: master.active_services?.[0]?.name || (ua ? "Майстер" : "Master"),
-        rating: Number(master.average_rating ?? 0),
-        image: master.profile_photo || masterImages[0],
-      }))
-    : [
-    { name: ua ? "Олена К." : "Olena K.", type: ua ? "Манікюр" : "Manicure", rating: 5.0, image: masterImages[0] },
-    { name: ua ? "Марія П." : "Maria P.", type: ua ? "Брови" : "Brows", rating: 5.0, image: masterImages[1] },
-    { name: ua ? "Дмитро С." : "Dmytro S.", type: ua ? "Чоловічі стрижки" : "Men's haircuts", rating: 4.9, image: masterImages[2] },
-  ];
+  const favoriteMasters = liveFavorites.map((master) => ({
+    id: master.id,
+    name: master.name,
+    type: master.active_services?.[0]?.name || (ua ? "Майстер" : "Master"),
+    rating: Number(master.average_rating ?? 0),
+    image: master.profile_photo || "",
+  }));
 
   const upcomingAppointment = appointments.find((appointment) => !["completed", "cancelled", "no_show"].includes(appointment.status));
 
-  const liked = [
-    { name: "Velvet Nails & Spa", type: ua ? "Салон краси" : "Beauty salon", rating: 4.9, reviews: 131, distance: ua ? "0.9 км" : "0.9 km", district: ua ? "Печерський р-н" : "Pechersk", match: 96, image: likedImages[0] },
-    { name: ua ? "Ірина Бондар" : "Iryna Bondar", type: ua ? "Брови" : "Brows", rating: 5.0, reviews: 107, distance: ua ? "1.1 км" : "1.1 km", district: ua ? "Брови" : "Brows", match: 90, image: likedImages[1] },
-    { name: "Luna Beauty House", type: ua ? "Салон краси" : "Beauty salon", rating: 4.8, reviews: 124, distance: ua ? "0.6 км" : "0.6 km", district: ua ? "Печерський р-н" : "Pechersk", match: 90, image: likedImages[2] },
-    { name: ua ? "Марина Кузьменко" : "Maryna Kuzmenko", type: ua ? "Візаж" : "Makeup", rating: 4.9, reviews: 112, distance: ua ? "1.3 км" : "1.3 km", district: ua ? "Візаж" : "Makeup", match: 88, image: likedImages[3] },
-  ];
+  const liked = liveFavorites.map((master) => ({
+    name: master.name,
+    type: master.active_services?.[0]?.name || (ua ? "Майстер" : "Master"),
+    rating: Number(master.average_rating ?? 0),
+    reviews: null,
+    distance: "—",
+    district: master.salons?.[0]?.name || "—",
+    match: null,
+    image: master.profile_photo || "",
+  }));
 
   const patchReview = (index: number, patch: Partial<Review>) =>
     setRatings((prev) => ({ ...prev, [index]: { ...prev[index], ...patch, sent: false } }));
