@@ -36,6 +36,10 @@ export type ApiSalon = {
     timezone?: string;
     city_tier?: string;
   } | null;
+  opened_date?: string | null;
+  latitude?: string | number;
+  longitude?: string | number;
+  masters?: number[];
   average_rating?: number;
   total_reviews?: number;
   masters_count?: number;
@@ -289,6 +293,10 @@ export async function verifyEmail(id: string, token: string) {
 
 export async function getMe() {
   return apiRequest<ApiUserProfile>("/api/users/me/");
+}
+
+export async function getSalon(id: number) {
+  return apiRequest<ApiSalon>(`/api/salons/${id}/`);
 }
 
 export async function createAppointment(payload: AppointmentPayload) {
