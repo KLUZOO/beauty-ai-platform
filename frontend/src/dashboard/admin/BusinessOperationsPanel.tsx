@@ -9,26 +9,23 @@ import {
   getPayment,
   getPromotion,
   getReferralEvent,
-  getSalon,
   listPayments,
   listPromotions,
   listReferralEvents,
   patchPayment,
   patchPromotion,
   patchReferralEvent,
-  patchSalon,
   updatePayment,
   updatePromotion,
   updateReferralEvent,
   type ApiPayment,
   type ApiPromotion,
   type ApiReferralEvent,
-  type ApiSalon,
   type PaymentMethod,
   type PaymentStatus,
 } from "../../api";
 
-type Module = "salons" | "payments" | "promotions" | "referrals";
+type Module = "payments" | "promotions" | "referrals";
 
 type PaymentForm = {
   appointment: string;
@@ -54,22 +51,6 @@ type ReferralForm = {
   source: string;
   destination_url: string;
   event_type: string;
-};
-
-type SalonForm = {
-  name: string;
-  country: string;
-  city_name: string;
-  address: string;
-  region: string;
-  coordinates: string;
-  timezone: string;
-  city_tier: string;
-  phone: string;
-  opened_date: string;
-  owner: string;
-  description: string;
-  logo: string;
 };
 
 const paymentMethods: PaymentMethod[] = ["cash", "card", "apple_pay", "google_pay"];
@@ -129,36 +110,12 @@ function referralToForm(event: ApiReferralEvent): ReferralForm {
   };
 }
 
-function salonToForm(salon: ApiSalon): SalonForm {
-  const location = salon.location;
-  const coordinates = location?.coordinates ||
-    (salon.latitude != null && salon.longitude != null ? `${salon.latitude}, ${salon.longitude}` : "");
-
-  return {
-    name: salon.name || "",
-    country: location?.country || "",
-    city_name: location?.city_name || salon.city || "",
-    address: location?.address || salon.address || "",
-    region: location?.region || salon.district || "",
-    coordinates,
-    timezone: location?.timezone || "",
-    city_tier: location?.city_tier || "",
-    phone: salon.phone || "",
-    opened_date: salon.opened_date || "",
-    owner: salon.owner == null ? "" : String(salon.owner),
-    description: salon.description || "",
-    logo: salon.logo || "",
-  };
-}
-
 export default function BusinessOperationsPanel({ lang }: { lang: "ua" | "en" }) {
   const ua = lang === "ua";
   const [activeModule, setActiveModule] = useState<Module>("payments");
   const [payments, setPayments] = useState<ApiPayment[]>([]);
   const [promotions, setPromotions] = useState<ApiPromotion[]>([]);
   const [referrals, setReferrals] = useState<ApiReferralEvent[]>([]);
-  const [salonId, setSalonId] = useState("");
-  const [editingSalon, setEditingSalon] = useState<(SalonForm & { id: number }) | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -215,7 +172,7 @@ export default function BusinessOperationsPanel({ lang }: { lang: "ua" | "en" })
               : undefined,
           }),
         );
-      } else if (activeModule === "referrals") {
+      } else {
         setReferrals(await listReferralEvents());
       }
     } catch (loadError) {
@@ -419,61 +376,7 @@ export default function BusinessOperationsPanel({ lang }: { lang: "ua" | "en" })
     setEditingReferral(null);
   };
 
-  const loadSalonForEdit = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    try {
-      const id = numberValue(salonId, ua ? "ID салону" : "salon ID");
-      if (!Number.isInteger(id) || id < 1) throw new Error(ua ? "ID салону має бути цілим додатним числом" : "Salon ID must be a positive integer");
-      setLoading(true);
-      setError(null);
-      setNotice(null);
-      const salon = await getSalon(id);
-      setEditingSalon({ ...salonToForm(salon), id });
-    } catch (loadError) {
-      setEditingSalon(null);
-      setError(errorMessage(loadError, ua ? "Не вдалося завантажити салон" : "Could not load salon"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveSalon = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!editingSalon) return;
-    try {
-      const owner = editingSalon.owner.trim() ? numberValue(editingSalon.owner, ua ? "ID власника" : "owner ID") : null;
-      if (owner !== null && (!Number.isInteger(owner) || owner < 1)) {
-        throw new Error(ua ? "ID власника має бути цілим додатним числом" : "Owner ID must be a positive integer");
-      }
-      const payload = {
-        name: editingSalon.name.trim(),
-        location: {
-          country: editingSalon.country.trim(),
-          city_name: editingSalon.city_name.trim(),
-          address: editingSalon.address.trim(),
-          region: editingSalon.region.trim(),
-          coordinates: editingSalon.coordinates.trim(),
-          timezone: editingSalon.timezone.trim(),
-          city_tier: editingSalon.city_tier.trim(),
-        },
-        phone: editingSalon.phone.trim() || null,
-        opened_date: editingSalon.opened_date || null,
-        owner,
-        description: editingSalon.description.trim() || null,
-        logo: editingSalon.logo.trim(),
-      };
-      if (!payload.name) throw new Error(ua ? "Вкажіть назву салону" : "Enter the salon name");
-      await runMutation(
-        () => patchSalon(editingSalon.id, payload),
-        ua ? "Салон оновлено через PATCH" : "Salon updated with PATCH",
-      );
-      setEditingSalon(null);
-    } catch (formError) {
-      setError(errorMessage(formError, ua ? "Перевірте дані салону" : "Check salon details"));
-    }
-  };
-
-  const deleteResource = async (resource: Exclude<Module, "salons">, id: number) => {
+  const deleteResource = async (resource: Module, id: number) => {
     const label = resource === "payments" ? (ua ? "платіж" : "payment") : resource === "promotions" ? (ua ? "акцію" : "promotion") : (ua ? "реферальну подію" : "referral event");
     if (!window.confirm(ua ? `Видалити ${label}?` : `Delete this ${label}?`)) return;
     await runMutation(
@@ -554,34 +457,6 @@ export default function BusinessOperationsPanel({ lang }: { lang: "ua" | "en" })
     );
   };
 
-  const renderSalonForm = () => {
-    if (!editingSalon) return null;
-    const setForm = (patch: Partial<SalonForm>) => setEditingSalon((current) => current ? { ...current, ...patch } : current);
-    return (
-      <form className="ops-form" onSubmit={saveSalon}>
-        <div className="ops-form-grid">
-          <label><span>{ua ? "Назва" : "Name"}</span><input required maxLength={100} value={editingSalon.name} onChange={(event) => setForm({ name: event.target.value })} /></label>
-          <label><span>{ua ? "Телефон" : "Phone"}</span><input maxLength={20} value={editingSalon.phone} onChange={(event) => setForm({ phone: event.target.value })} /></label>
-          <label><span>{ua ? "Дата відкриття" : "Opened date"}</span><input type="date" value={editingSalon.opened_date} onChange={(event) => setForm({ opened_date: event.target.value })} /></label>
-          <label><span>{ua ? "ID власника" : "Owner ID"}</span><input type="number" min="1" value={editingSalon.owner} onChange={(event) => setForm({ owner: event.target.value })} /></label>
-          <label><span>{ua ? "Країна" : "Country"}</span><input value={editingSalon.country} onChange={(event) => setForm({ country: event.target.value })} /></label>
-          <label><span>{ua ? "Місто" : "City"}</span><input required maxLength={50} value={editingSalon.city_name} onChange={(event) => setForm({ city_name: event.target.value })} /></label>
-          <label><span>{ua ? "Регіон / район" : "Region / district"}</span><input value={editingSalon.region} onChange={(event) => setForm({ region: event.target.value })} /></label>
-          <label><span>{ua ? "Часовий пояс" : "Timezone"}</span><input placeholder="Europe/Kyiv" value={editingSalon.timezone} onChange={(event) => setForm({ timezone: event.target.value })} /></label>
-          <label><span>{ua ? "Рівень міста" : "City tier"}</span><input placeholder="big" value={editingSalon.city_tier} onChange={(event) => setForm({ city_tier: event.target.value })} /></label>
-          <label><span>{ua ? "Координати" : "Coordinates"}</span><input placeholder="50.4501, 30.5234" value={editingSalon.coordinates} onChange={(event) => setForm({ coordinates: event.target.value })} /></label>
-          <label className="ops-field-wide"><span>{ua ? "Адреса" : "Address"}</span><input required maxLength={150} value={editingSalon.address} onChange={(event) => setForm({ address: event.target.value })} /></label>
-          <label className="ops-field-wide"><span>{ua ? "Опис" : "Description"}</span><textarea rows={3} value={editingSalon.description} onChange={(event) => setForm({ description: event.target.value })} /></label>
-          <label className="ops-field-wide"><span>{ua ? "URL логотипа" : "Logo URL"}</span><input type="url" value={editingSalon.logo} onChange={(event) => setForm({ logo: event.target.value })} /></label>
-        </div>
-        <div className="ops-form-actions">
-          <button className="ops-primary" type="submit">{ua ? "Зберегти зміни (PATCH)" : "Save changes (PATCH)"}</button>
-          <button className="ops-link-button" type="button" onClick={() => setEditingSalon(null)}>{ua ? "Скасувати" : "Cancel"}</button>
-        </div>
-      </form>
-    );
-  };
-
   return (
     <section className="dashboard-panel ops-panel">
       <div className="dashboard-panel-head">
@@ -594,7 +469,6 @@ export default function BusinessOperationsPanel({ lang }: { lang: "ua" | "en" })
 
       <div className="ops-tabs" role="tablist" aria-label={ua ? "Ресурси API" : "API resources"}>
         {([
-          ["salons", ua ? "Салони" : "Salons"],
           ["payments", ua ? "Оплати" : "Payments"],
           ["promotions", ua ? "Акції" : "Promotions"],
           ["referrals", ua ? "Реферальні події" : "Referral events"],
@@ -608,20 +482,6 @@ export default function BusinessOperationsPanel({ lang }: { lang: "ua" | "en" })
       {error && <p className="ops-message error" role="alert">{error}</p>}
       {notice && <p className="ops-message success" role="status">{notice}</p>}
       {loading && <p className="ops-loading">{ua ? "Завантаження…" : "Loading…"}</p>}
-
-      {activeModule === "salons" && (
-        <div className="ops-resource">
-          <div className="ops-resource-header">
-            <div><h3>{ua ? "Редагування салону" : "Edit salon"}</h3><p>{ua ? "Завантажте салон за ID та оновіть його частково через PATCH" : "Load a salon by ID and update selected data with PATCH"}</p></div>
-            {editingSalon && <span className="ops-count">#{editingSalon.id}</span>}
-          </div>
-          <form className="ops-filters ops-salon-lookup" onSubmit={loadSalonForEdit}>
-            <label><span>{ua ? "ID салону" : "Salon ID"}</span><input required type="number" min="1" value={salonId} onChange={(event) => setSalonId(event.target.value)} placeholder="1" /></label>
-            <button className="ops-secondary" type="submit">{ua ? "Завантажити" : "Load salon"}</button>
-          </form>
-          {editingSalon ? renderSalonForm() : <p className="ops-empty">{ua ? "Введіть ID салону, щоб завантажити дані для редагування." : "Enter a salon ID to load its editable data."}</p>}
-        </div>
-      )}
 
       {activeModule === "payments" && (
         <div className="ops-resource">
