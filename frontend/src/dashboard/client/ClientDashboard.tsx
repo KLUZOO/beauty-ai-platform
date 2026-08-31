@@ -46,6 +46,30 @@ function Stars({ value, onChange, label }: { value: number; onChange: (value: nu
   );
 }
 
+function appointmentDate(value: string, lang: Lang) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(lang === "ua" ? "uk-UA" : "en-US", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function appointmentStatus(status: string, lang: Lang) {
+  const labels: Record<string, [string, string]> = {
+    pending: ["Очікує підтвердження", "Pending confirmation"],
+    confirmed: ["Підтверджено", "Confirmed"],
+    in_progress: ["У процесі", "In progress"],
+    completed: ["Завершено", "Completed"],
+    cancelled: ["Скасовано", "Cancelled"],
+    no_show: ["Не відбувся", "No show"],
+  };
+  return labels[status]?.[lang === "ua" ? 0 : 1] ?? status;
+}
+
 export default function ClientDashboard({
   user,
   lang,
@@ -296,19 +320,27 @@ export default function ClientDashboard({
                 <h2>{ua ? "Мої майбутні записи" : "My upcoming bookings"}</h2>
                 <button type="button">{ua ? "Переглянути всі" : "View all"}</button>
               </div>
-              <article className="client-booking-card">
-                <div className="client-booking-photo-wrap">
-                  <img className="client-booking-photo" src={bookingImage} alt="Beauty Room" />
-                  <span className="client-booking-soon">{ua ? "Через 2 дні" : "In 2 days"}</span>
+              {upcomingAppointment ? (
+                <article className="client-booking-card">
+                  <div className="client-booking-photo-wrap">
+                    <img className="client-booking-photo" src={bookingImage} alt={ua ? "Ваш запис" : "Your booking"} />
+                    <span className="client-booking-soon">{appointmentStatus(upcomingAppointment.status, lang)}</span>
+                  </div>
+                  <div className="client-booking-info">
+                    <h3>{ua ? `Запис #${upcomingAppointment.id}` : `Booking #${upcomingAppointment.id}`}</h3>
+                    <p className="client-booking-salon">{ua ? `Салон #${upcomingAppointment.salon}` : `Salon #${upcomingAppointment.salon}`}</p>
+                    <p className="client-booking-master">{ua ? `Майстер #${upcomingAppointment.master}` : `Master #${upcomingAppointment.master}`}</p>
+                    <div className="client-booking-meta"><span>▣ {appointmentDate(upcomingAppointment.start, lang)}</span><span>◷ {appointmentDate(upcomingAppointment.end, lang).split(", ").pop()}</span></div>
+                  </div>
+                  <button className="client-details-btn" type="button" onClick={() => void cancelAppointment(upcomingAppointment.id)}>{ua ? "Скасувати" : "Cancel"}</button>
+                </article>
+              ) : (
+                <div className="client-empty-booking">
+                  <span aria-hidden="true">✦</span>
+                  <p>{ua ? "У вас ще немає майбутніх записів." : "You do not have any upcoming bookings yet."}</p>
+                  <small>{ua ? "Оберіть майстра на головній, щоб записатися." : "Choose a master on the home page to book a visit."}</small>
                 </div>
-                <div className="client-booking-info">
-                  <h3>{ua ? "Манікюр + покриття гель-лаком" : "Manicure + gel polish"}</h3>
-                  <p className="client-booking-salon">Beauty Room</p>
-                  <p className="client-booking-master">{ua ? "Майстер: Ірина Бондар" : "Master: Iryna Bondar"}</p>
-                  <div className="client-booking-meta"><span>▣ {ua ? "24 травня, пт" : "Fri, May 24"}</span><span>◯ 14:00</span><span>◷ {ua ? "1 год 30 хв" : "1 h 30 min"}</span></div>
-                </div>
-                <button className="client-details-btn" type="button">{ua ? "Деталі" : "Details"}</button>
-              </article>
+              )}
             </section>
 
             <div className="client-middle-grid">
@@ -372,6 +404,22 @@ export default function ClientDashboard({
               <label><span>Email</span><input type="email" value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} /></label>
             </div>
             <button type="button" className="cta-btn profile-save-btn">{ua ? "Зберегти зміни" : "Save changes"}</button>
+            <div className="profile-subsection profile-appointments-section">
+              <div className="profile-subsection-head">
+                <div><h3>{ua ? "Мої записи" : "My bookings"}</h3><p>{ua ? "Усі ваші записи до майстрів" : "All your appointments with masters"}</p></div>
+                <span className="profile-appointments-count">{appointments.length}</span>
+              </div>
+              {appointments.length > 0 ? (
+                <div className="profile-appointments-list">
+                  {appointments.map((appointment) => (
+                    <div className="profile-appointment-row" key={appointment.id}>
+                      <div><b>{ua ? `Запис #${appointment.id}` : `Booking #${appointment.id}`}</b><span>{appointmentDate(appointment.start, lang)}</span></div>
+                      <div><span>{ua ? `Майстер #${appointment.master} · Салон #${appointment.salon}` : `Master #${appointment.master} · Salon #${appointment.salon}`}</span><b className={`appointment-status appointment-status-${appointment.status}`}>{appointmentStatus(appointment.status, lang)}</b></div>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="profile-empty-copy">{ua ? "Записи з’являться тут після підтвердження." : "Your bookings will appear here after you make one."}</p>}
+            </div>
             <div className="profile-subsection"><h3>{ua ? "Пароль" : "Password"}</h3><button type="button" className="booking-action-btn ghost">{ua ? "Змінити пароль" : "Change password"}</button></div>
             <div className="profile-subsection"><h3>{ua ? "Сповіщення" : "Notifications"}</h3><label className="profile-toggle-row"><span>{ua ? "Email-сповіщення" : "Email notifications"}</span><input type="checkbox" checked={notifyEmail} onChange={(event) => setNotifyEmail(event.target.checked)} /></label><label className="profile-toggle-row"><span>{ua ? "Push-сповіщення" : "Push notifications"}</span><input type="checkbox" checked={notifyPush} onChange={(event) => setNotifyPush(event.target.checked)} /></label></div>
             <div className="profile-subsection profile-danger-zone"><h3>{ua ? "Акаунт" : "Account"}</h3><button type="button" className="booking-action-btn ghost" onClick={onHome}>{ua ? "Вийти" : "Log out"}</button><button type="button" className="profile-delete-btn">{ua ? "Видалити акаунт" : "Delete account"}</button></div>

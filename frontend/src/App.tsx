@@ -14,6 +14,7 @@ import {
   getMe,
   login,
   register,
+  createAppointment,
   type ApiMaster,
   type ApiPromotion,
   type ApiReview,
@@ -43,6 +44,14 @@ type CardData = {
   experience?: string;
   locationNote?: string;
   profileLinkLabel?: string;
+  booking?: {
+    master: number;
+    salon: number;
+    service: number;
+    masterName: string;
+    salonName: string;
+    serviceName: string;
+  };
 };
 
 const CATEGORY_TERMS: Record<string, string[]> = {
@@ -337,10 +346,16 @@ function profileToMockUser(profile: ApiUserProfile, lang: Lang, fallbackEmail = 
 
 function getAuthErrorMessage(error: unknown, lang: Lang, fallback: string) {
   const message = error instanceof Error ? error.message : "";
-  if (message.toLowerCase().includes("no active account")) {
+  const normalizedMessage = message.toLowerCase();
+  if (normalizedMessage.includes("no active account") || normalizedMessage.includes("not active")) {
     return lang === "ua"
       ? "Акаунт ще не активний. Підтвердіть email у листі від Beauty AI, а потім спробуйте увійти ще раз."
       : "Your account is not active yet. Confirm your email using the Beauty AI message, then try signing in again.";
+  }
+  if (normalizedMessage.includes("email") && (normalizedMessage.includes("already") || normalizedMessage.includes("exists"))) {
+    return lang === "ua"
+      ? "Цей email уже зареєстрований. Увійдіть у наявний акаунт або використайте іншу адресу."
+      : "This email is already registered. Sign in to the existing account or use another address.";
   }
   if (/^api request failed \(\d+\)$/i.test(message)) return fallback;
   return message || fallback;
@@ -562,21 +577,29 @@ function AuthModal({
               </label>
             </>
           )}
-          {mode === "register" && role === "master" && partnerKind === "salon" && (
+          {mode === "register" && role === "master" && (
             <>
               <p className="auth-partner-note">
-                {ua ? "Реєстрація закладу — після заповнення підключимо ваш салон до Beauty AI." : "Business registration — we'll connect your salon to Beauty AI after this step."}
+                {partnerKind === "salon"
+                  ? ua
+                    ? "Спочатку створимо акаунт. Профіль салону підключається після активації майстра на стороні Beauty AI."
+                    : "First we create your account. Your salon profile is connected after Beauty AI activates the master profile."
+                  : ua
+                    ? "Спочатку створимо акаунт. Профіль майстра потрібно активувати на стороні Beauty AI після підтвердження email."
+                    : "First we create your account. The master profile must be activated by Beauty AI after email verification."}
               </p>
-              <label>
-                <span>{ua ? "Назва закладу" : "Business name"}</span>
-                <input
-                  type="text"
-                  value={businessName}
-                  onChange={(event) => setBusinessName(event.target.value)}
-                  placeholder={ua ? "Наприклад, Luna Beauty House" : "e.g. Luna Beauty House"}
-                  required
-                />
-              </label>
+              {partnerKind === "salon" && (
+                <label>
+                  <span>{ua ? "Назва закладу" : "Business name"}</span>
+                  <input
+                    type="text"
+                    value={businessName}
+                    onChange={(event) => setBusinessName(event.target.value)}
+                    placeholder={ua ? "Наприклад, Luna Beauty House" : "e.g. Luna Beauty House"}
+                    required
+                  />
+                </label>
+              )}
             </>
           )}
 
@@ -742,12 +765,14 @@ function Card({
   hideTags = false,
   hideReason = false,
   onLocationClick,
+  onBookClick,
 }: {
   data: CardData;
   t: Translations;
   hideTags?: boolean;
   hideReason?: boolean;
   onLocationClick?: (name: string, district: string, distance: string) => void;
+  onBookClick?: (data: CardData) => void;
 }) {
   const [showReason, setShowReason] = useState(false);
   const isSolo = data.variant === "solo";
@@ -831,7 +856,7 @@ function Card({
         </div>
 
         <div className="card-cta-row">
-          <button className="cta-btn">{t.cta}</button>
+          <button className="cta-btn" type="button" onClick={() => onBookClick?.(data)}>{t.cta}</button>
           <a className="view-link" href="#">
             {data.profileLinkLabel ?? t.viewSalon} →
           </a>
@@ -1374,11 +1399,13 @@ function RecommendationCarousel({
   t,
   variant,
   onLocationClick,
+  onBookClick,
 }: {
   cards: CardData[];
   t: Translations;
   variant: "salons" | "masters" | "nearby" | "worth-trying" | "fresh";
   onLocationClick?: (name: string, district: string, distance: string) => void;
+  onBookClick?: (data: CardData) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -1456,6 +1483,7 @@ function RecommendationCarousel({
             hideTags
             hideReason
             onLocationClick={onLocationClick}
+            onBookClick={onBookClick}
           />
         )) : <p className="empty-results">{t.noResults}</p>}
       </div>
@@ -2114,6 +2142,8 @@ function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number):
 function apiMasterToCard(master: ApiMaster, index: number): CardData {
   const serviceNames = (master.services ?? []).map((service) => service.name);
   const salonName = master.salons?.[0]?.name;
+  const firstService = master.services?.[0];
+  const firstSalon = master.salons?.[0];
   const experience = master.years_of_experience ? `${master.years_of_experience} років досвіду` : undefined;
   return {
     id: master.id,
@@ -2131,6 +2161,18 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
     locationNote: salonName || "Beauty AI",
     profileLinkLabel: "Профіль майстра",
     variant: "solo",
+    ...(firstService && firstSalon
+      ? {
+          booking: {
+            master: master.id,
+            salon: firstSalon.id,
+            service: firstService.id,
+            masterName: `${master.first_name} ${master.last_name}`.trim(),
+            salonName: firstSalon.name,
+            serviceName: firstService.name,
+          },
+        }
+      : {}),
   };
 }
 
@@ -2150,6 +2192,154 @@ function apiPromotionToOffer(promotion: ApiPromotion, salonName: string, index: 
     gift: promotion.description,
     isDiscountOnly: true,
   };
+}
+
+type BookingSlot = { start: string; end: string };
+
+function localDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function displayBookingDate(value: string, lang: Lang) {
+  return new Intl.DateTimeFormat(lang === "ua" ? "uk-UA" : "en-US", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function slotTime(value: string) {
+  const match = value.match(/T?(\d{2}:\d{2})/);
+  return match?.[1] ?? value;
+}
+
+function bookingDateTime(date: string, time: string) {
+  if (time.includes("T")) return new Date(time).toISOString();
+  return new Date(`${date}T${time.length === 5 ? `${time}:00` : time}`).toISOString();
+}
+
+function BookingModal({
+  card,
+  lang,
+  onClose,
+  onCreated,
+}: {
+  card: CardData;
+  lang: Lang;
+  onClose: () => void;
+  onCreated: (appointment: import("./api").ApiAppointment) => void;
+}) {
+  const ua = lang === "ua";
+  const firstDate = localDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const [dateFrom, setDateFrom] = useState(firstDate);
+  const [slotsByDate, setSlotsByDate] = useState<Record<string, BookingSlot[]>>({});
+  const [selectedDate, setSelectedDate] = useState(firstDate);
+  const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!card.booking) return;
+    const dateTo = localDateInput(new Date(new Date(`${dateFrom}T12:00:00`).getTime() + 6 * 24 * 60 * 60 * 1000));
+    setLoading(true);
+    setError(null);
+    setSelectedSlot(null);
+    void apiRequest<Record<string, BookingSlot[]>>(
+      `/api/appointments/available-slots/?salon=${card.booking.salon}&master=${card.booking.master}&service=${card.booking.service}&date_from=${dateFrom}&date_to=${dateTo}`,
+    )
+      .then((payload) => {
+        setSlotsByDate(payload && typeof payload === "object" ? payload : {});
+        setSelectedDate(Object.keys(payload ?? {})[0] ?? dateFrom);
+      })
+      .catch((requestError) => {
+        setError(requestError instanceof Error ? requestError.message : (ua ? "Не вдалося завантажити вільні вікна." : "Could not load available slots."));
+      })
+      .finally(() => setLoading(false));
+  }, [card.booking, dateFrom, ua]);
+
+  const dates = Object.keys(slotsByDate);
+  const slots = slotsByDate[selectedDate] ?? [];
+
+  const submitBooking = async () => {
+    if (!card.booking || !selectedSlot) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const appointment = await createAppointment({
+        master: card.booking.master,
+        salon: card.booking.salon,
+        service: card.booking.service,
+        start: bookingDateTime(selectedDate, selectedSlot.start),
+        end: bookingDateTime(selectedDate, selectedSlot.end),
+      });
+      onCreated(appointment);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : (ua ? "Не вдалося створити запис." : "Could not create the booking."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="booking-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <div className="booking-modal-window" role="dialog" aria-modal="true" aria-labelledby="booking-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button type="button" className="booking-modal-close" onClick={onClose} aria-label={ua ? "Закрити" : "Close"}>×</button>
+        <span className="about-kicker">✦ BEAUTY AI</span>
+        <h2 id="booking-modal-title">{ua ? "Записатися до майстра" : "Book an appointment"}</h2>
+        <p className="booking-modal-subtitle">{card.booking?.masterName ?? card.title}</p>
+
+        {!card.booking ? (
+          <div className="booking-state booking-state-error">
+            {ua
+              ? "Для цього профілю поки немає підключених даних послуги та розкладу. Спробуйте майстра з позначкою LIVE API."
+              : "This profile does not have connected service and schedule data yet. Try a master marked LIVE API."}
+          </div>
+        ) : (
+          <>
+            <div className="booking-summary">
+              <span>{card.booking.serviceName}</span>
+              <span>{card.booking.salonName}</span>
+            </div>
+            <label className="booking-date-field">
+              <span>{ua ? "Показати вільні дати від" : "Show availability from"}</span>
+              <input type="date" value={dateFrom} min={firstDate} onChange={(event) => setDateFrom(event.target.value)} />
+            </label>
+            {loading && <div className="booking-state">{ua ? "Шукаємо вільні вікна…" : "Finding available slots…"}</div>}
+            {!loading && error && <div className="booking-state booking-state-error">{error}</div>}
+            {!loading && !error && dates.length === 0 && (
+              <div className="booking-state">{ua ? "На найближчі дні вільних вікон немає." : "There are no available slots for the next few days."}</div>
+            )}
+            {!loading && !error && dates.length > 0 && (
+              <>
+                <div className="booking-date-tabs" role="tablist" aria-label={ua ? "Доступні дати" : "Available dates"}>
+                  {dates.map((date) => (
+                    <button key={date} type="button" className={date === selectedDate ? "active" : ""} onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}>
+                      <span>{displayBookingDate(date, lang)}</span>
+                      <small>{slotsByDate[date].length} {ua ? "вікон" : "slots"}</small>
+                    </button>
+                  ))}
+                </div>
+                <div className="booking-slot-grid">
+                  {slots.map((slot) => (
+                    <button key={`${slot.start}-${slot.end}`} type="button" className={selectedSlot === slot ? "active" : ""} onClick={() => setSelectedSlot(slot)}>
+                      {slotTime(slot.start)} – {slotTime(slot.end)}
+                    </button>
+                  ))}
+                </div>
+                <button className="cta-btn booking-submit-btn" type="button" disabled={!selectedSlot || saving} onClick={() => void submitBooking()}>
+                  {saving ? (ua ? "Зберігаємо…" : "Saving…") : (ua ? "Підтвердити запис" : "Confirm booking")}
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -2176,6 +2366,7 @@ export default function App() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [recommendationFiltersOpen, setRecommendationFiltersOpen] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState<SelectedMapLocation | null>(null);
+  const [bookingCard, setBookingCard] = useState<CardData | null>(null);
   const [liveHomeData, setLiveHomeData] = useState<{
     salons?: CardData[];
     masters?: CardData[];
@@ -2366,10 +2557,20 @@ export default function App() {
     });
   };
 
+  const handleBookClick = (card: CardData) => {
+    if (!user) {
+      setBookingCard(card);
+      setAuthIntent({ mode: "login", role: "client" });
+      setAuthOpen(true);
+      return;
+    }
+    setBookingCard(card);
+  };
+
   const handleAuthenticated = (nextUser: MockUser) => {
     setUser(nextUser);
     setAuthOpen(false);
-    setView("dashboard");
+    setView(bookingCard ? "home" : "dashboard");
   };
 
   const handleLogout = () => {
@@ -2574,7 +2775,7 @@ export default function App() {
             </div>
             <p>{t.sections.recommendations.subtitle}</p>
           </div>
-           <RecommendationCarousel cards={filteredRecommendations} t={t} variant="salons" onLocationClick={handleLocationClick} />
+           <RecommendationCarousel cards={filteredRecommendations} t={t} variant="salons" onLocationClick={handleLocationClick} onBookClick={handleBookClick} />
         </div>
 
         <div className="recommendation-row recommendation-row-masters" id="masters">
@@ -2587,7 +2788,7 @@ export default function App() {
             </div>
             <p>{t.sections.soloMasters.subtitle}</p>
           </div>
-           <RecommendationCarousel cards={filteredMasters} t={t} variant="masters" onLocationClick={handleLocationClick} />
+           <RecommendationCarousel cards={filteredMasters} t={t} variant="masters" onLocationClick={handleLocationClick} onBookClick={handleBookClick} />
         </div>
       </section>
       <div className="section-divider" aria-hidden="true">
@@ -2768,6 +2969,18 @@ export default function App() {
             <MapSection lang={lang} selectedLocation={selectedMapLocation} />
           </div>
         </div>
+      )}
+
+      {bookingCard && user && (
+        <BookingModal
+          card={bookingCard}
+          lang={lang}
+          onClose={() => setBookingCard(null)}
+          onCreated={() => {
+            setBookingCard(null);
+            setView("dashboard");
+          }}
+        />
       )}
     </div>
   );

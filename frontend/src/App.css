@@ -3172,3 +3172,165 @@ more-filters-text-btn {
     grid-template-columns: 1fr;
   }
 }
+
+.booking-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(25, 16, 43, 0.48);
+  backdrop-filter: blur(8px);
+}
+
+.booking-modal-window {
+  position: relative;
+  width: min(620px, 100%);
+  max-height: min(780px, calc(100vh - 44px));
+  overflow-y: auto;
+  padding: 34px;
+  border: 1px solid rgba(113, 53, 232, 0.16);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(39, 19, 69, 0.25);
+}
+
+.booking-modal-window h2 {
+  margin: 12px 0 6px;
+  color: #191226;
+  font-size: 28px;
+}
+
+.booking-modal-subtitle {
+  margin: 0 0 20px;
+  color: #6d617e;
+  font-size: 15px;
+}
+
+.booking-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #f7f2ff;
+  color: #6f35db;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.booking-summary {
+  display: grid;
+  gap: 7px;
+  margin: 18px 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #faf7ff;
+  color: #4e4161;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.booking-date-field {
+  display: grid;
+  gap: 7px;
+  margin: 20px 0 14px;
+  color: #4f435f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.booking-date-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ded2ef;
+  border-radius: 11px;
+  background: #fff;
+  color: #241936;
+  font: inherit;
+}
+
+.booking-date-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 12px;
+}
+
+.booking-date-tabs button,
+.booking-slot-grid button {
+  border: 1px solid #ded2ef;
+  background: #fff;
+  color: #584c68;
+  cursor: pointer;
+}
+
+.booking-date-tabs button {
+  min-width: 104px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.booking-date-tabs button span,
+.booking-date-tabs button small {
+  display: block;
+}
+
+.booking-date-tabs button span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.booking-date-tabs button small {
+  margin-top: 4px;
+  color: #8a7b9d;
+  font-size: 11px;
+}
+
+.booking-date-tabs button.active,
+.booking-slot-grid button.active {
+  border-color: #7135e8;
+  background: #7135e8;
+  color: #fff;
+}
+
+.booking-date-tabs button.active small {
+  color: #eadfff;
+}
+
+.booking-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 9px;
+  margin: 6px 0 20px;
+}
+
+.booking-slot-grid button {
+  padding: 11px 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.booking-submit-btn {
+  width: 100%;
+}
+
+.booking-state {
+  padding: 18px;
+  border-radius: 14px;
+  background: #faf7ff;
+  color: #6e617d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.booking-state-error {
+  background: #fff5f6;
+  color: #b23d58;
+}
