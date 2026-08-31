@@ -181,6 +181,11 @@
   background: rgba(255, 255, 255, .72);
 }
 
+.ops-salon-lookup {
+  grid-template-columns: minmax(160px, 280px) auto;
+  align-items: end;
+}
+
 .ops-form-actions,
 .ops-row-actions {
   display: flex;
