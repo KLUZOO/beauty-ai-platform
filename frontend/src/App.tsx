@@ -2110,8 +2110,22 @@ const apiImageFallbacks = [
 
 function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number): CardData {
   const status = normalize(salon.available_status ?? "");
-  const isOpen = ["open", "available", "відкрито", "available_now"].some((value) => status.includes(value));
-  const tags = serviceNames.length > 0 ? serviceNames.slice(0, 4) : [salon.city || "Beauty services"];
+  const location = salon.location;
+  const city = salon.city || location?.city_name || "";
+  const district = salon.district || location?.region || city;
+  const address = salon.address || location?.address || city || "Адреса не вказана";
+  const statusIsOpen = ["open", "available", "відкрито", "available_now"].some((value) => status.includes(value));
+  const statusIsClosed = ["closed", "unavailable", "закрит", "недоступ"].some((value) => status.includes(value));
+  const todayWeekday = new Date().getDay() || 7;
+  const todaySchedule = salon.working_hours?.find((schedule) => schedule.weekday === todayWeekday);
+  const scheduleIsOpen = Boolean(
+    todaySchedule &&
+    !todaySchedule.is_closed &&
+    todaySchedule.opening_time &&
+    todaySchedule.closing_time,
+  );
+  const isOpen = statusIsOpen || (!statusIsClosed && scheduleIsOpen);
+  const tags = serviceNames.length > 0 ? serviceNames.slice(0, 4) : [city || "Beauty services"];
   return {
     id: salon.id,
     image: salon.logo || apiImageFallbacks[index % apiImageFallbacks.length],
@@ -2120,13 +2134,13 @@ function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number):
     type: "Салон краси",
     rating: Number(salon.average_rating ?? 0),
     reviews: Number(salon.total_reviews ?? 0),
-    district: salon.district || salon.city || "Kyiv",
+    district: district || "Kyiv",
     distance: "—",
     openNow: isOpen,
     tags,
     priceFrom: "—",
     mastersCount: salon.masters_count ? `${salon.masters_count} майстрів` : undefined,
-    locationNote: salon.address,
+    locationNote: address,
   };
 }
 
@@ -2444,16 +2458,12 @@ export default function App() {
       setReviewsLoading(true);
       setReviewsError(null);
 
-      if (!user) {
-        setLiveHomeData({});
-        setReviewsLoading(false);
-        return;
-      }
-
       const [salonsResult, servicesResult, mastersResult, promotionsResult, reviewsResult] = await Promise.allSettled([
         apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>("/api/salons/?ordering=-rating&page=1"),
         apiRequest<{ results?: ApiService[] } | ApiService[]>("/api/services/?page=1"),
-        apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>("/api/users/masters/?ordering=-rating&page=1"),
+        user
+          ? apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>("/api/users/masters/?ordering=-rating&page=1")
+          : Promise.resolve<ApiMaster[]>([]),
         apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>("/api/promotions/?active=true&page=1"),
         apiRequest<{ results?: ApiReview[] } | ApiReview[]>("/api/reviews/?page=1", {}, true, false),
       ]);

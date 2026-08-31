@@ -20,15 +20,32 @@ export type ApiUserProfile = {
 export type ApiSalon = {
   id: number;
   name: string;
-  city: string;
+  city?: string;
   district?: string | null;
-  address: string;
+  address?: string;
+  description?: string | null;
+  phone?: string | null;
   logo?: string;
+  location?: {
+    id?: number;
+    country?: string;
+    city_name?: string;
+    address?: string;
+    region?: string;
+    coordinates?: string;
+    timezone?: string;
+    city_tier?: string;
+  } | null;
   average_rating?: number;
   total_reviews?: number;
   masters_count?: number;
   service_count?: number;
-  working_hours?: Array<{ opening_time?: string; closing_time?: string; is_closed?: boolean }>;
+  working_hours?: Array<{
+    weekday?: number;
+    opening_time?: string | null;
+    closing_time?: string | null;
+    is_closed?: boolean;
+  }>;
   available_status?: string;
 };
 
