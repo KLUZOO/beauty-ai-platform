@@ -89,6 +89,15 @@ export type ApiAppointment = {
   created_at: string;
 };
 
+export type AppointmentPayload = {
+  master: number;
+  salon: number;
+  service: number;
+  start: string;
+  end: string;
+  promo_id?: number | null;
+};
+
 export type ApiMasterAppointment = {
   id: number;
   start: string;
@@ -152,6 +161,26 @@ function readTokens(): AuthTokens | null {
   }
 }
 
+function formatApiError(payload: unknown) {
+  if (typeof payload === "string" && payload.trim()) return payload;
+  if (!payload || typeof payload !== "object") return "";
+
+  const record = payload as Record<string, unknown>;
+  const directMessage = [record.detail, record.message, record.error].find(
+    (value): value is string => typeof value === "string" && value.trim().length > 0,
+  );
+  if (directMessage) return directMessage;
+
+  return Object.entries(record)
+    .flatMap(([field, value]) => {
+      const messages = Array.isArray(value) ? value : [value];
+      return messages
+        .filter((message): message is string => typeof message === "string" && message.trim().length > 0)
+        .map((message) => `${field}: ${message}`);
+    })
+    .join("; ");
+}
+
 function writeTokens(tokens: AuthTokens) {
   try {
     localStorage.setItem(AUTH_TOKENS_KEY, JSON.stringify(tokens));
@@ -200,7 +229,7 @@ export async function apiRequest<T = unknown>(
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    const message = payload?.detail || payload?.message || `API request failed (${response.status})`;
+    const message = formatApiError(payload) || `API request failed (${response.status})`;
     throw new Error(message);
   }
 
@@ -243,6 +272,13 @@ export async function verifyEmail(id: string, token: string) {
 
 export async function getMe() {
   return apiRequest<ApiUserProfile>("/api/users/me/");
+}
+
+export async function createAppointment(payload: AppointmentPayload) {
+  return apiRequest<ApiAppointment>("/api/appointments/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function listPayments(page = 1) {
