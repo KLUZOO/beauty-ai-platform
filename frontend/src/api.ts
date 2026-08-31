@@ -37,6 +37,7 @@ export type ApiSalon = {
     city_tier?: string;
   } | null;
   opened_date?: string | null;
+  owner?: number | null;
   latitude?: string | number;
   longitude?: string | number;
   masters?: number[];
@@ -51,6 +52,26 @@ export type ApiSalon = {
     is_closed?: boolean;
   }>;
   available_status?: string;
+};
+
+export type SalonLocationPayload = {
+  country?: string;
+  city_name?: string;
+  address?: string;
+  region?: string;
+  coordinates?: string;
+  timezone?: string;
+  city_tier?: string;
+};
+
+export type SalonPatchPayload = {
+  name?: string;
+  location?: SalonLocationPayload;
+  phone?: string | null;
+  opened_date?: string | null;
+  owner?: number | null;
+  description?: string | null;
+  logo?: string;
 };
 
 export type ApiService = {
@@ -297,6 +318,13 @@ export async function getMe() {
 
 export async function getSalon(id: number) {
   return apiRequest<ApiSalon>(`/api/salons/${id}/`);
+}
+
+export async function patchSalon(id: number, payload: SalonPatchPayload) {
+  return apiRequest<ApiSalon>(`/api/salons/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function createAppointment(payload: AppointmentPayload) {

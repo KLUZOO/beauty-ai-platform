@@ -2695,8 +2695,8 @@ export default function App() {
   // Salons shown in the UI must always come from the backend endpoint.
   // An empty or failed API response stays empty instead of showing demo salons.
   const liveSalons = liveHomeData.salons ?? [];
-  const liveMasters = liveHomeData.masters?.length ? liveHomeData.masters : soloMastersRecommendations;
-  const livePromotions = liveHomeData.promotions?.length ? liveHomeData.promotions : partners;
+  const liveMasters = liveHomeData.masters ?? [];
+  const livePromotions = liveHomeData.promotions ?? [];
   const liveReviews = liveHomeData.reviews ?? [];
   const filteredRecommendations = liveSalons.filter((card) =>
     matchesCommonFilters(card, filters, activeCategory, searchQuery),
