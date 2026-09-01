@@ -3324,44 +3324,33 @@ export default function App() {
       setReviewsLoading(true);
       setReviewsError(null);
 
-      const [
-        salonsResult,
-        servicesResult,
-        mastersResult,
-        promotionsResult,
-        reviewsResult,
-      ] = await Promise.allSettled([
-        apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>(
-          "/api/salons/?ordering=-rating&page=1",
-          {},
-          true,
-          false,
-        ),
-        apiRequest<{ results?: ApiService[] } | ApiService[]>(
-          "/api/services/?page=1",
-          {},
-          true,
-          false,
-        ),
-        apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>(
-          "/api/users/masters/?ordering=-rating&page=1",
-          {},
-          true,
-          !!getAccessToken(),
-        ),
-        apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>(
-          "/api/promotions/?active=true&page=1",
-          {},
-          true,
-          false,
-        ),
-        apiRequest<{ results?: ApiReview[] } | ApiReview[]>(
-          "/api/reviews/?page=1",
-          {},
-          true,
-          false,
-        ),
-      ]);
+      const [salonsResult, servicesResult, promotionsResult, reviewsResult] =
+        await Promise.allSettled([
+          apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>(
+            "/api/salons/?ordering=-rating&page=1",
+            {},
+            true,
+            false,
+          ),
+          apiRequest<{ results?: ApiService[] } | ApiService[]>(
+            "/api/services/?page=1",
+            {},
+            true,
+            false,
+          ),
+          apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>(
+            "/api/promotions/?active=true&page=1",
+            {},
+            true,
+            false,
+          ),
+          apiRequest<{ results?: ApiReview[] } | ApiReview[]>(
+            "/api/reviews/?page=1",
+            {},
+            true,
+            false,
+          ),
+        ]);
 
       if (cancelled) return;
 
@@ -3372,10 +3361,6 @@ export default function App() {
       const services =
         servicesResult.status === "fulfilled"
           ? apiResults(servicesResult.value)
-          : [];
-      const masters =
-        mastersResult.status === "fulfilled"
-          ? apiResults(mastersResult.value)
           : [];
       const promotions =
         promotionsResult.status === "fulfilled"
@@ -3388,12 +3373,7 @@ export default function App() {
       const serviceMasterCards = apiServiceMastersToCards(
         services as ApiService[],
       );
-      const masterCards =
-        mastersResult.status === "fulfilled" && masters.length > 0
-          ? masters.map((master, index) =>
-              apiMasterToCard(master as ApiMaster, index),
-            )
-          : serviceMasterCards;
+      const masterCards = serviceMasterCards;
       const serviceNamesBySalon = new Map<number, string[]>();
 
       setReviewsLoading(false);
@@ -3413,19 +3393,22 @@ export default function App() {
         });
       });
 
-      const salonCards = salons.map((salon, index) =>
-        apiSalonToCard(
-          salon as ApiSalon,
-          serviceNamesBySalon.get((salon as ApiSalon).id) ?? [],
-          index,
-        ),
-      );
+      const salonCards =
+        salons.length > 0
+          ? salons.map((salon, index) =>
+              apiSalonToCard(
+                salon as ApiSalon,
+                serviceNamesBySalon.get((salon as ApiSalon).id) ?? [],
+                index,
+              ),
+            )
+          : [];
       const salonsById = new Map(
         salons.map((salon) => [(salon as ApiSalon).id, salon as ApiSalon]),
       );
 
       setLiveHomeData({
-        ...(salonsResult.status === "fulfilled" ? { salons: salonCards } : {}),
+        salons: salonCards,
         masters: masterCards,
         ...(promotionsResult.status === "fulfilled"
           ? {
@@ -3448,36 +3431,6 @@ export default function App() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!user) return;
-
-    const reloadMasters = async () => {
-      try {
-        const mastersResult = await apiRequest<
-          { results?: ApiMaster[] } | ApiMaster[]
-        >("/api/users/masters/?ordering=-rating&page=1", {}, true, true);
-        if (cancelled) return;
-        const masters = apiResults(mastersResult);
-        const masterCards = masters.map((master, index) =>
-          apiMasterToCard(master as ApiMaster, index),
-        );
-        setLiveHomeData((prev) => ({
-          ...prev,
-          masters: masterCards,
-        }));
-      } catch {
-        // Silent fail, keep existing masters
-      }
-    };
-
-    void reloadMasters();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.email]);
 
   if (authRestoring) {
     return (
