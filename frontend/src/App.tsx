@@ -3344,7 +3344,7 @@ export default function App() {
           false,
         ),
         apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>(
-          "/api/users/masters/?ordering=-rating&page=1",
+          "/api/masters/?ordering=-rating&page=1",
           {},
           true,
           false,
