@@ -2610,12 +2610,12 @@ export default function App() {
       setReviewsError(null);
 
       const [salonsResult, servicesResult, mastersResult, promotionsResult, reviewsResult] = await Promise.allSettled([
-        apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>("/api/salons/?ordering=-rating&page=1"),
-        apiRequest<{ results?: ApiService[] } | ApiService[]>("/api/services/?page=1"),
+        apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>("/api/salons/?ordering=-rating&page=1", {}, true, false),
+        apiRequest<{ results?: ApiService[] } | ApiService[]>("/api/services/?page=1", {}, true, false),
         user
           ? apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>("/api/users/masters/?ordering=-rating&page=1")
           : Promise.resolve<ApiMaster[]>([]),
-        apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>("/api/promotions/?active=true&page=1"),
+        apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>("/api/promotions/?active=true&page=1", {}, true, false),
         apiRequest<{ results?: ApiReview[] } | ApiReview[]>("/api/reviews/?page=1", {}, true, false),
       ]);
 
