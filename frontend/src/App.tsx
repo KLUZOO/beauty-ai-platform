@@ -3447,7 +3447,37 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!user) return;
+
+    const reloadMasters = async () => {
+      try {
+        const mastersResult = await apiRequest<
+          { results?: ApiMaster[] } | ApiMaster[]
+        >("/api/users/masters/?ordering=-rating&page=1", {}, true, true);
+        if (cancelled) return;
+        const masters = apiResults(mastersResult);
+        const masterCards = masters.map((master, index) =>
+          apiMasterToCard(master as ApiMaster, index),
+        );
+        setLiveHomeData((prev) => ({
+          ...prev,
+          masters: masterCards,
+        }));
+      } catch {
+        // Silent fail, keep existing masters
+      }
+    };
+
+    void reloadMasters();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
 
   if (authRestoring) {
     return (
