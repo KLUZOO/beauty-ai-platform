@@ -527,11 +527,45 @@ export async function deleteReferralEvent(id: number) {
   return apiRequest<void>(`/api/referral-events/${id}/`, { method: "DELETE" });
 }
 
+export async function listMasters(
+  filters: { page?: number; ordering?: string } = {},
+) {
+  const params = new URLSearchParams({ page: String(filters.page ?? 1) });
+  if (filters.ordering) params.set("ordering", filters.ordering);
+  const payload = await apiRequest<ApiCollection<ApiMaster>>(
+    `/api/users/masters/?${params.toString()}`,
+    {},
+    true,
+    false,
+  );
+  return apiResults(payload);
+}
+
 export async function listFavoriteMasters(page = 1) {
   const payload = await apiRequest<ApiCollection<ApiFavoriteMaster>>(
     `/api/users/favorite-masters/?page=${page}`,
   );
   return apiResults(payload);
+}
+
+export async function checkIsFavoriteMaster(masterId: number) {
+  const result = await apiRequest<{ is_favorite: boolean }>(
+    `/api/users/favorite-masters/${masterId}/`,
+  );
+  return result.is_favorite;
+}
+
+export async function addFavoriteMaster(masterId: number) {
+  return apiRequest<ApiFavoriteMaster>(
+    `/api/users/favorite-masters/${masterId}/`,
+    { method: "POST" },
+  );
+}
+
+export async function removeFavoriteMaster(masterId: number) {
+  return apiRequest<void>(`/api/users/favorite-masters/${masterId}/`, {
+    method: "DELETE",
+  });
 }
 
 export function clearTokens() {
