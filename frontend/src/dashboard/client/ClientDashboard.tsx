@@ -125,6 +125,7 @@ export default function ClientDashboard({
     service: `Service #${appointment.service}`,
     date: new Date(appointment.start).toLocaleDateString(ua ? "uk-UA" : "en-US", { day: "numeric", month: "short" }),
   }));
+  const latestVisit = history[0];
 
   const favoriteMasters = liveFavorites.map((master) => ({
     id: master.id,
@@ -205,6 +206,8 @@ export default function ClientDashboard({
   const renderReviewForm = (index: number) => {
     const visit = history[index];
     const review = ratings[index];
+
+    if (!visit || !review) return null;
 
     return (
       <div className="client-review-form review-form-card">
@@ -326,14 +329,24 @@ export default function ClientDashboard({
               <section className="client-section client-reviews-section client-surface-panel">
                 <div className="client-section-head"><h2>{ua ? "Останні відгуки" : "Latest reviews"}</h2><button type="button">{ua ? "Переглянути всі" : "View all"}</button></div>
                 <div className="client-review-card">
-                  <div className="client-review-mainline">
-                    <div className="client-review-author"><img src={user.avatar} alt={user.name} /><div><b>{ua ? "Наталя С." : "Natalia S."}</b><span>{history[0].date}</span></div></div>
-                    <div className="client-review-score"><span>★★★★★</span><strong>5.0</strong></div>
-                  </div>
-                  <p>{ratings[0].comment || (ua ? "Дякую за ідеальний манікюр! 💜" : "Thank you for the perfect manicure! 💜")}</p>
-                  <div className="client-review-dots" aria-hidden="true"><i className="active"></i><i></i><i></i><i></i></div>
-                  <button type="button" className="client-review-edit-hit" onClick={() => setOpenReview(openReview === 0 ? null : 0)} aria-label={ua ? "Редагувати відгук" : "Edit review"}></button>
-                  {openReview === 0 && renderReviewForm(0)}
+                  {latestVisit ? (
+                    <>
+                      <div className="client-review-mainline">
+                        <div className="client-review-author"><img src={user.avatar} alt={user.name} /><div><b>{ua ? "Наталя С." : "Natalia S."}</b><span>{latestVisit.date}</span></div></div>
+                        <div className="client-review-score"><span>★★★★★</span><strong>5.0</strong></div>
+                      </div>
+                      <p>{ratings[0]?.comment || (ua ? "Дякую за ідеальний манікюр! 💜" : "Thank you for the perfect manicure! 💜")}</p>
+                      <div className="client-review-dots" aria-hidden="true"><i className="active"></i><i></i><i></i><i></i></div>
+                      <button type="button" className="client-review-edit-hit" onClick={() => setOpenReview(openReview === 0 ? null : 0)} aria-label={ua ? "Редагувати відгук" : "Edit review"}></button>
+                      {openReview === 0 && renderReviewForm(0)}
+                    </>
+                  ) : (
+                    <div className="client-empty-booking">
+                      <span aria-hidden="true">✦</span>
+                      <p>{ua ? "У вас ще немає відгуків." : "You do not have any reviews yet."}</p>
+                      <small>{ua ? "Завершені записи з’являться тут після візиту." : "Completed bookings will appear here after your visit."}</small>
+                    </div>
+                  )}
                 </div>
               </section>
 
