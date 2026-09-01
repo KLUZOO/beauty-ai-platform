@@ -533,7 +533,7 @@ export async function listMasters(
   const params = new URLSearchParams({ page: String(filters.page ?? 1) });
   if (filters.ordering) params.set("ordering", filters.ordering);
   const payload = await apiRequest<ApiCollection<ApiMaster>>(
-    `/api/users/masters/?${params.toString()}`,
+    `/api/masters/?${params.toString()}`,
     {},
     true,
     false,
