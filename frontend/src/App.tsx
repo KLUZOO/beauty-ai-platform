@@ -3447,7 +3447,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [user?.email]);
+  }, []);
 
   if (authRestoring) {
     return (
