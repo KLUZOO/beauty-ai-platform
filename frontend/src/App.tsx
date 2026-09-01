@@ -2626,9 +2626,10 @@ export default function App() {
       const masters = mastersResult.status === "fulfilled" ? apiResults(mastersResult.value) : [];
       const promotions = promotionsResult.status === "fulfilled" ? apiResults(promotionsResult.value) : [];
       const reviews = reviewsResult.status === "fulfilled" ? apiResults(reviewsResult.value) : [];
-      const masterCards = user && mastersResult.status === "fulfilled"
+      const serviceMasterCards = apiServiceMastersToCards(services as ApiService[]);
+      const masterCards = mastersResult.status === "fulfilled" && masters.length > 0
         ? masters.map((master, index) => apiMasterToCard(master as ApiMaster, index))
-        : apiServiceMastersToCards(services as ApiService[]);
+        : serviceMasterCards;
       const serviceNamesBySalon = new Map<number, string[]>();
 
       setReviewsLoading(false);
