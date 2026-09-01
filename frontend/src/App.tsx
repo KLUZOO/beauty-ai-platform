@@ -3344,10 +3344,10 @@ export default function App() {
           false,
         ),
         apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>(
-          "/api/masters/?ordering=-rating&page=1",
+          "/api/users/masters/?ordering=-rating&page=1",
           {},
           true,
-          false,
+          !!getAccessToken(),
         ),
         apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>(
           "/api/promotions/?active=true&page=1",
@@ -3447,7 +3447,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   if (authRestoring) {
     return (
