@@ -59,7 +59,7 @@ export default function MasterDashboard({ user, lang, onHome, onRoleChange }: { 
 
     {section === "profile" && <section className="master-card-v2 master-profile-v2">
       <div className="master-card-head-v2"><div><h2>Особиста інформація</h2><p>Так вас бачать клієнти Beauty AI</p></div></div>
-      <div className="master-profile-top-v2"><img src={user.avatar} alt={user.name}/><div><b>{user.name}</b><span>Майстер • Beauty AI</span><button type="button">Змінити фото</button></div></div>
+      <div className="master-profile-top-v2">{user.avatar ? <img src={user.avatar} alt={user.name}/> : <span className="image-placeholder" aria-hidden="true">✦</span>}<div><b>{user.name}</b><span>Майстер • Beauty AI</span><button type="button">Змінити фото</button></div></div>
       <div className="master-form-grid-v2"><label>Ім'я<input defaultValue={user.name}/></label><label>Email<input defaultValue={user.email}/></label><label>Телефон<input defaultValue="+380 67 123 45 67"/></label><label>Місто<input defaultValue="Київ"/></label><label className="wide">Про себе<textarea defaultValue="Майстер манікюру та brow-artist. Люблю натуральні форми, акуратне покриття та красиві деталі."/></label></div>
       <button className="master-primary-v2" type="button">Зберегти зміни</button>
     </section>}

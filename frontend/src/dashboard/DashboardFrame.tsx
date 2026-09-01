@@ -75,7 +75,7 @@ export default function DashboardFrame({
             </div>
             <div className="master-header-actions-v2">
               <button className="master-notification-v2" type="button" aria-label={ua ? "Сповіщення" : "Notifications"}>♢<span>2</span></button>
-              <div className="master-user-v2"><img src={user.avatar} alt={user.name} /><div><b>{user.name}</b><small>{ua ? "Майстер" : "Master"}</small></div><span>⌄</span></div>
+              <div className="master-user-v2">{user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}<div><b>{user.name}</b><small>{ua ? "Майстер" : "Master"}</small></div><span>⌄</span></div>
             </div>
           </header>
           <div className="master-content-v2">{children}</div>
@@ -98,7 +98,7 @@ export default function DashboardFrame({
       </div>
       <section className="dashboard-hero">
         <div><span className="dashboard-kicker">✦ BEAUTY AI</span><h1>{title}</h1><p>{user.email}</p></div>
-        <div className="dashboard-avatar"><img src={user.avatar} alt={user.name} /></div>
+        <div className="dashboard-avatar">{user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}</div>
       </section>
       {cards.length > 0 && <section className="dashboard-stats">
         {cards.map(([cardTitle, value, caption]) => (

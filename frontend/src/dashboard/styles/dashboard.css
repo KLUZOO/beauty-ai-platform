@@ -74,6 +74,16 @@
   border-radius: 50%;
 }
 
+.dashboard-avatar .image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #8c5be8;
+  background: #eee8f7;
+}
+
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1156,7 +1166,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background-image: var(--partner-photo);
+  background-image: var(--partner-photo, none);
   background-size: cover;
   background-position: center;
   filter: saturate(.84) contrast(.92) brightness(1.03);
@@ -1489,7 +1499,8 @@
   position: relative;
   aspect-ratio: 4 / 5;
   min-height: 310px;
-  background-image: var(--kyiv-cover-photo);
+  background-color: #eee8f7;
+  background-image: var(--kyiv-cover-photo, none);
   background-size: cover;
   background-position: center;
   isolation: isolate;
@@ -1500,7 +1511,7 @@
   position: absolute;
   inset: 0;
   z-index: -2;
-  background-image: var(--kyiv-cover-photo);
+  background-image: var(--kyiv-cover-photo, none);
   background-size: cover;
   background-position: center;
   filter: saturate(.82) contrast(.94) brightness(.94);
@@ -1877,3 +1888,37 @@
 @media(max-width:1050px){.master-cabinet-v2{grid-template-columns:190px minmax(0,1fr)}.master-content-v2{padding:24px}.master-summary-v2{grid-template-columns:repeat(2,1fr)}.master-main-grid-v2{grid-template-columns:1fr}.master-sidebar-v2{padding-left:14px;padding-right:14px}}
 @media(max-width:720px){.master-cabinet-v2{display:block}.master-sidebar-v2{position:static;width:auto;height:auto;padding:15px}.master-brand-v2{padding-bottom:14px}.master-nav-v2{display:grid;grid-template-columns:repeat(3,1fr)}.master-nav-v2 button{justify-content:center;padding:0 8px}.master-logout-v2,.master-level-v2{display:none}.master-header-v2{height:auto;padding:18px}.master-header-actions-v2 .master-user-v2 div{display:none}.master-content-v2{padding:16px}.master-summary-v2,.master-summary-v2.finance{grid-template-columns:1fr 1fr}.master-month-grid-v2{grid-template-columns:1fr 1fr}.master-slot-v2{grid-template-columns:42px minmax(0,1fr) 58px}.master-slot-v2>strong{display:none}.master-form-grid-v2{grid-template-columns:1fr}.master-form-grid-v2 label.wide{grid-column:auto}}
 @media(max-width:460px){.master-summary-v2,.master-summary-v2.finance{grid-template-columns:1fr}.master-header-v2 h1{font-size:19px}.master-nav-v2 button{font-size:11px}.master-nav-icon-v2{display:none}}
+
+.client-profile-trigger .image-placeholder,
+.client-review-author > .image-placeholder,
+.client-master-row > .image-placeholder,
+.client-liked-image-wrap > .image-placeholder,
+.master-user-v2 > .image-placeholder,
+.master-profile-top-v2 > .image-placeholder {
+  display: grid;
+  place-items: center;
+  color: #8c5be8;
+  background: #eee8f7;
+}
+.client-booking-no-photo {
+  display: grid;
+  place-items: center;
+  color: #8c5be8;
+  background: #eee8f7;
+  font-size: 42px;
+}
+.client-booking-no-photo .client-booking-soon {
+  display: block;
+  color: #fff;
+  font-size: 12px;
+}
+.master-user-v2 > .image-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.master-profile-top-v2 > .image-placeholder {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+}
