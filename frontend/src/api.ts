@@ -1,6 +1,7 @@
 const API_BASE_URL = import.meta.env.DEV
   ? ""
-  : (import.meta.env.VITE_API_BASE_URL || "https://beautyaiservice.polandcentral.cloudapp.azure.com");
+  : import.meta.env.VITE_API_BASE_URL ||
+    "https://beautyaiservice.polandcentral.cloudapp.azure.com";
 
 const AUTH_TOKENS_KEY = "beautyai_auth_tokens";
 
@@ -82,7 +83,9 @@ export type ApiService = {
   price?: string | number;
   duration_minutes?: number;
   salons?: Array<{ id: number; name: string }>;
-  masters?: string | Array<{ id: number; first_name: string; last_name: string }>;
+  masters?:
+    | string
+    | Array<{ id: number; first_name: string; last_name: string }>;
   image?: string | null;
 };
 
@@ -163,7 +166,12 @@ export type ApiFavoriteMaster = {
 };
 
 export type PaymentMethod = "cash" | "card" | "apple_pay" | "google_pay";
-export type PaymentStatus = "pending" | "completed" | "failed" | "cancelled" | "refunded";
+export type PaymentStatus =
+  | "pending"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "refunded";
 
 export type ApiPayment = {
   id: number;
@@ -196,7 +204,11 @@ function readTokens(): AuthTokens | null {
     const raw = localStorage.getItem(AUTH_TOKENS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (typeof parsed?.access !== "string" || typeof parsed?.refresh !== "string") return null;
+    if (
+      typeof parsed?.access !== "string" ||
+      typeof parsed?.refresh !== "string"
+    )
+      return null;
     return parsed;
   } catch {
     return null;
@@ -209,7 +221,8 @@ function formatApiError(payload: unknown) {
 
   const record = payload as Record<string, unknown>;
   const directMessage = [record.detail, record.message, record.error].find(
-    (value): value is string => typeof value === "string" && value.trim().length > 0,
+    (value): value is string =>
+      typeof value === "string" && value.trim().length > 0,
   );
   if (directMessage) return directMessage;
 
@@ -217,7 +230,10 @@ function formatApiError(payload: unknown) {
     .flatMap(([field, value]) => {
       const messages = Array.isArray(value) ? value : [value];
       return messages
-        .filter((message): message is string => typeof message === "string" && message.trim().length > 0)
+        .filter(
+          (message): message is string =>
+            typeof message === "string" && message.trim().length > 0,
+        )
         .map((message) => `${field}: ${message}`);
     })
     .join("; ");
@@ -256,7 +272,8 @@ export async function apiRequest<T = unknown>(
   includeAuth = true,
 ): Promise<T> {
   const headers = new Headers(init.headers);
-  if (!headers.has("Content-Type") && init.body) headers.set("Content-Type", "application/json");
+  if (!headers.has("Content-Type") && init.body)
+    headers.set("Content-Type", "application/json");
   const access = includeAuth ? getAccessToken() : null;
   if (access) headers.set("Authorization", `Bearer ${access}`);
 
@@ -271,7 +288,8 @@ export async function apiRequest<T = unknown>(
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    const message = formatApiError(payload) || `API request failed (${response.status})`;
+    const message =
+      formatApiError(payload) || `API request failed (${response.status})`;
     throw new Error(message);
   }
 
@@ -280,14 +298,19 @@ export async function apiRequest<T = unknown>(
 }
 
 export function apiResults<T>(payload: T[] | { results?: T[] }): T[] {
-  return Array.isArray(payload) ? payload : payload?.results ?? [];
+  return Array.isArray(payload) ? payload : (payload?.results ?? []);
 }
 
 export async function login(email: string, password: string) {
-  const tokens = await apiRequest<AuthTokens>("/api/users/token/", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  }, true, false);
+  const tokens = await apiRequest<AuthTokens>(
+    "/api/users/token/",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    },
+    true,
+    false,
+  );
   writeTokens(tokens);
   return tokens;
 }
@@ -299,17 +322,27 @@ export async function register(payload: {
   last_name: string;
   phone: string;
 }) {
-  return apiRequest<ApiUserProfile>("/api/users/register/", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }, true, false);
+  return apiRequest<ApiUserProfile>(
+    "/api/users/register/",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    true,
+    false,
+  );
 }
 
 export async function verifyEmail(id: string, token: string) {
-  return apiRequest<void>("/api/users/verify-email/", {
-    method: "POST",
-    body: JSON.stringify({ id, token }),
-  }, true, false);
+  return apiRequest<void>(
+    "/api/users/verify-email/",
+    {
+      method: "POST",
+      body: JSON.stringify({ id, token }),
+    },
+    true,
+    false,
+  );
 }
 
 export async function getMe() {
@@ -335,7 +368,9 @@ export async function createAppointment(payload: AppointmentPayload) {
 }
 
 export async function listPayments(page = 1) {
-  const payload = await apiRequest<ApiCollection<ApiPayment>>(`/api/payments/?page=${page}`);
+  const payload = await apiRequest<ApiCollection<ApiPayment>>(
+    `/api/payments/?page=${page}`,
+  );
   return apiResults(payload);
 }
 
@@ -365,7 +400,10 @@ export async function updatePayment(id: number, payload: PaymentPayload) {
   });
 }
 
-export async function patchPayment(id: number, payload: Partial<PaymentPayload>) {
+export async function patchPayment(
+  id: number,
+  payload: Partial<PaymentPayload>,
+) {
   return apiRequest<ApiPayment>(`/api/payments/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
@@ -386,13 +424,23 @@ export type PromotionPayload = {
 };
 
 export async function listPromotions(
-  filters: { page?: number; active?: boolean; discount_percent?: number; salon_id?: number } = {},
+  filters: {
+    page?: number;
+    active?: boolean;
+    discount_percent?: number;
+    salon_id?: number;
+  } = {},
 ) {
   const params = new URLSearchParams({ page: String(filters.page ?? 1) });
-  if (filters.active !== undefined) params.set("active", String(filters.active));
-  if (filters.discount_percent !== undefined) params.set("discount_percent", String(filters.discount_percent));
-  if (filters.salon_id !== undefined) params.set("salon_id", String(filters.salon_id));
-  const payload = await apiRequest<ApiCollection<ApiPromotion>>(`/api/promotions/?${params.toString()}`);
+  if (filters.active !== undefined)
+    params.set("active", String(filters.active));
+  if (filters.discount_percent !== undefined)
+    params.set("discount_percent", String(filters.discount_percent));
+  if (filters.salon_id !== undefined)
+    params.set("salon_id", String(filters.salon_id));
+  const payload = await apiRequest<ApiCollection<ApiPromotion>>(
+    `/api/promotions/?${params.toString()}`,
+  );
   return apiResults(payload);
 }
 
@@ -414,7 +462,10 @@ export async function updatePromotion(id: number, payload: PromotionPayload) {
   });
 }
 
-export async function patchPromotion(id: number, payload: Partial<PromotionPayload>) {
+export async function patchPromotion(
+  id: number,
+  payload: Partial<PromotionPayload>,
+) {
   return apiRequest<ApiPromotion>(`/api/promotions/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
@@ -435,7 +486,9 @@ export type ReferralEventPayload = {
 };
 
 export async function listReferralEvents(page = 1) {
-  const payload = await apiRequest<ApiCollection<ApiReferralEvent>>(`/api/referral-events/?page=${page}`);
+  const payload = await apiRequest<ApiCollection<ApiReferralEvent>>(
+    `/api/referral-events/?page=${page}`,
+  );
   return apiResults(payload);
 }
 
@@ -450,14 +503,20 @@ export async function getReferralEvent(id: number) {
   return apiRequest<ApiReferralEvent>(`/api/referral-events/${id}/`);
 }
 
-export async function updateReferralEvent(id: number, payload: ReferralEventPayload) {
+export async function updateReferralEvent(
+  id: number,
+  payload: ReferralEventPayload,
+) {
   return apiRequest<ApiReferralEvent>(`/api/referral-events/${id}/`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });
 }
 
-export async function patchReferralEvent(id: number, payload: Partial<ReferralEventPayload>) {
+export async function patchReferralEvent(
+  id: number,
+  payload: Partial<ReferralEventPayload>,
+) {
   return apiRequest<ApiReferralEvent>(`/api/referral-events/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
@@ -466,6 +525,13 @@ export async function patchReferralEvent(id: number, payload: Partial<ReferralEv
 
 export async function deleteReferralEvent(id: number) {
   return apiRequest<void>(`/api/referral-events/${id}/`, { method: "DELETE" });
+}
+
+export async function listFavoriteMasters(page = 1) {
+  const payload = await apiRequest<ApiCollection<ApiFavoriteMaster>>(
+    `/api/users/favorite-masters/?page=${page}`,
+  );
+  return apiResults(payload);
 }
 
 export function clearTokens() {
