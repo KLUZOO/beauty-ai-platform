@@ -27,7 +27,7 @@ import {
 
 type CardData = {
   id?: number;
-  image: string;
+  image?: string | null;
   badges: { text: string; kind: string }[];
   title: string;
   type: string;
@@ -172,7 +172,7 @@ function matchesPartnerFilters(
 
 type PartnerOffer = {
   id?: number;
-  image: string;
+  image?: string | null;
   discount: string;
   validUntil: string;
   title: string;
@@ -310,13 +310,7 @@ type MockUser = {
   name: string;
   email: string;
   role: AuthRole;
-  avatar: string;
-};
-
-const roleAvatars: Record<AuthRole, string> = {
-  client: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=160&h=160&fit=crop",
-  master: "https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=160&h=160&fit=crop",
-  admin: "https://images.pexels.com/photos/2381069/pexels-photo-2381069.jpeg?auto=compress&cs=tinysrgb&w=160&h=160&fit=crop",
+  avatar?: string | null;
 };
 
 // Дев: йде через Vite proxy (vite.config.ts, ключ "/api") — той самий origin, без CORS/TLS болю.
@@ -341,7 +335,7 @@ function profileToMockUser(profile: ApiUserProfile, lang: Lang, fallbackEmail = 
     name: name || (lang === "ua" ? "Beauty AI користувач" : "Beauty AI user"),
     email: profile.email || fallbackEmail,
     role,
-    avatar: profile.photo || roleAvatars[role],
+    avatar: profile.photo || null,
   };
 }
 
@@ -417,7 +411,7 @@ function AuthModal({
             : ua ? "Клієнт Beauty AI" : "Beauty AI Client",
       email: email || fallbackEmail,
       role: authRole,
-      avatar: roleAvatars[authRole],
+      avatar: null,
     });
   };
 
@@ -466,10 +460,10 @@ function AuthModal({
     }
   };
 
-  const fakeGoogleAccounts: { role: AuthRole; name: string; email: string; avatar: string }[] = [
-    { role: "client", name: ua ? "Ірина Клієнтка" : "Irene Client", email: "irene.client@gmail.com", avatar: roleAvatars.client },
-    { role: "master", name: ua ? "Майстер Beauty" : "Beauty Master", email: "beauty.master@gmail.com", avatar: roleAvatars.master },
-    { role: "admin", name: ua ? "Адмін Beauty AI" : "Beauty AI Admin", email: "admin.beautyai@gmail.com", avatar: roleAvatars.admin },
+  const fakeGoogleAccounts: { role: AuthRole; name: string; email: string; avatar: null }[] = [
+    { role: "client", name: ua ? "Ірина Клієнтка" : "Irene Client", email: "irene.client@gmail.com", avatar: null },
+    { role: "master", name: ua ? "Майстер Beauty" : "Beauty Master", email: "beauty.master@gmail.com", avatar: null },
+    { role: "admin", name: ua ? "Адмін Beauty AI" : "Beauty AI Admin", email: "admin.beautyai@gmail.com", avatar: null },
   ];
 
   const pickGoogleAccount = (account: (typeof fakeGoogleAccounts)[number]) => {
@@ -708,7 +702,7 @@ function AuthModal({
                       onClick={() => !googlePickingRole && pickGoogleAccount(account)}
                       disabled={!!googlePickingRole && !isPicking}
                     >
-                      <img src={account.avatar} alt={account.name} />
+                      {account.avatar ? <img src={account.avatar} alt={account.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}
                       <span className="google-picker-account-info">
                         <b>{account.name}</b>
                         <span>{account.email}</span>
@@ -775,7 +769,7 @@ function Card({
     <div className={`card ${isSolo ? "card-solo" : ""}`}>
       <div
         className={`card-image ${isSolo ? "card-image-solo" : ""}`}
-        style={{ ['--card-photo' as string]: `url(${data.image})` }}
+        style={data.image ? { ['--card-photo' as string]: `url(${data.image})` } : undefined}
       >
         <div className="card-badges">
           {data.badges.map((b) => (
@@ -893,7 +887,6 @@ function Card({
 
 const recommendations: CardData[] = [
   {
-    image: "https://images.pexels.com/photos/7750114/pexels-photo-7750114.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
     badges: [{ text: "AI MATCH 98%", kind: "ai-match" }],
     title: "Luna Beauty House",
     type: "Салон краси",
@@ -908,7 +901,6 @@ const recommendations: CardData[] = [
     why: "Високий рейтинг, спеціалізація на манікюрі, зручна локація та вільні вікна сьогодні",
   },
   {
-    image: "https://images.pexels.com/photos/7195808/pexels-photo-7195808.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
     badges: [{ text: "AI MATCH 94%", kind: "ai-match" }],
     title: "Nails Studio",
     type: "Салон краси",
@@ -923,7 +915,6 @@ const recommendations: CardData[] = [
     why: "Чудові відгуки та оптимальне співвідношення ціна-якість для вашого запиту",
   },
   {
-    image: "https://images.pexels.com/photos/7750115/pexels-photo-7750115.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
     badges: [
       { text: "AI MATCH 93%", kind: "ai-match" },
       { text: "НОВИНКА", kind: "new" },
@@ -941,7 +932,6 @@ const recommendations: CardData[] = [
     why: "Підходить вашому бюджету та має багато позитивних відгуків",
   },
   {
-    image: "https://images.pexels.com/photos/7750091/pexels-photo-7750091.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
     badges: [{ text: "AI MATCH 89%", kind: "ai-match" }],
     title: "Velvet Nails & Spa",
     type: "Салон краси",
@@ -957,7 +947,6 @@ const recommendations: CardData[] = [
   },
 
   {
-    image: "https://images.pexels.com/photos/7750117/pexels-photo-7750117.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
     badges: [{ text: "AI MATCH 87%", kind: "ai-match" }],
     title: "Atelier Beauty",
     type: "Салон краси",
@@ -972,7 +961,6 @@ const recommendations: CardData[] = [
     why: "Сильні відгуки, зручна локація та послуги, що відповідають вашому запиту",
   },
   {
-    image: "https://images.pexels.com/photos/7750116/pexels-photo-7750116.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
     badges: [{ text: "AI MATCH 85%", kind: "ai-match" }, { text: "НОВИНКА", kind: "new" }],
     title: "Élan Studio",
     type: "Студія краси",
@@ -990,7 +978,6 @@ const recommendations: CardData[] = [
 
 const soloMastersRecommendations: CardData[] = [
   {
-    image: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop",
     badges: [{ text: "AI MATCH 96%", kind: "ai-match" }],
     title: "Оксана Мельник",
     type: "Соло майстер · Манікюр",
@@ -1007,7 +994,6 @@ const soloMastersRecommendations: CardData[] = [
     why: "Високий рейтинг та вузька спеціалізація саме на манікюрі, який ви шукали",
   },
   {
-    image: "https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop",
     badges: [{ text: "AI MATCH 92%", kind: "ai-match" }],
     title: "Дмитро Кравець",
     type: "Соло майстер · Барбер",
@@ -1024,7 +1010,6 @@ const soloMastersRecommendations: CardData[] = [
     why: "Один з найдосвідченіших барберів поруч із вами, з великою кількістю відгуків",
   },
   {
-    image: "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop",
     badges: [{ text: "AI MATCH 90%", kind: "ai-match" }],
     title: "Ірина Бондар",
     type: "Соло майстер · Брови та вії",
@@ -1041,7 +1026,6 @@ const soloMastersRecommendations: CardData[] = [
     why: "Ідеальний рейтинг 5.0 та спеціалізація саме на бровах і віях",
   },
   {
-    image: "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop",
     badges: [{ text: "AI MATCH 87%", kind: "ai-match" }],
     title: "Марина Кузьменко",
     type: "Соло майстер · Візаж",
@@ -1059,7 +1043,6 @@ const soloMastersRecommendations: CardData[] = [
   },
 
   {
-    image: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop",
     badges: [{ text: "AI MATCH 85%", kind: "ai-match" }],
     title: "Софія Левченко",
     type: "Косметолог",
@@ -1076,7 +1059,6 @@ const soloMastersRecommendations: CardData[] = [
     why: "Високі оцінки за доглядові процедури та зручний час запису",
   },
   {
-    image: "https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop",
     badges: [{ text: "AI MATCH 83%", kind: "ai-match" }],
     title: "Андрій Савчук",
     type: "Стиліст",
@@ -1097,7 +1079,6 @@ const soloMastersRecommendations: CardData[] = [
 
 const partners: PartnerOffer[] = [
   {
-    image: "https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800&h=520&fit=crop",
     discount: "-30%",
     validUntil: "до 30 червня",
     title: "Комплекс для волосся",
@@ -1110,7 +1091,6 @@ const partners: PartnerOffer[] = [
     gift: "Укладка у подарунок",
   },
   {
-    image: "https://images.pexels.com/photos/3757942/pexels-photo-3757942.jpeg?auto=compress&cs=tinysrgb&w=800&h=520&fit=crop",
     discount: "-20%",
     validUntil: "до 25 червня",
     title: "Масаж спини",
@@ -1123,7 +1103,6 @@ const partners: PartnerOffer[] = [
     gift: "Ароматерапія у подарунок",
   },
   {
-    image: "https://images.pexels.com/photos/3997391/pexels-photo-3997391.jpeg?auto=compress&cs=tinysrgb&w=800&h=520&fit=crop",
     discount: "-25%",
     validUntil: "до 20 червня",
     title: "Манікюр + гель-лак",
@@ -1136,7 +1115,6 @@ const partners: PartnerOffer[] = [
     gift: "Дизайн 2 нігтів у подарунок",
   },
   {
-    image: "https://images.pexels.com/photos/3993324/pexels-photo-3993324.jpeg?auto=compress&cs=tinysrgb&w=800&h=520&fit=crop",
     discount: "-15%",
     validUntil: "до 15 червня",
     title: "Брови + ламінування",
@@ -1149,7 +1127,6 @@ const partners: PartnerOffer[] = [
     gift: "Корекція у подарунок",
   },
   {
-    image: "https://images.pexels.com/photos/3997983/pexels-photo-3997983.jpeg?auto=compress&cs=tinysrgb&w=800&h=520&fit=crop",
     discount: "-20%",
     validUntil: "до 12 липня",
     title: "Стрижка + укладка",
@@ -1162,7 +1139,6 @@ const partners: PartnerOffer[] = [
     gift: "Догляд для волосся",
   },
   {
-    image: "https://images.pexels.com/photos/3764014/pexels-photo-3764014.jpeg?auto=compress&cs=tinysrgb&w=800&h=520&fit=crop",
     discount: "-25%",
     validUntil: "до 18 липня",
     title: "Догляд для обличчя",
@@ -1177,7 +1153,6 @@ const partners: PartnerOffer[] = [
 ];
 const nearby: CardData[] = [
   {
-    image: "https://images.openai.com/static-rsc-4/Sdyxiwwe1san-rxTJmneyPfBnIXhc9o_TpIDDLsqRAP38W358_vG-s9JhQ63Mq1DhfN6HfNt1xbDolkTaZE1kIK2q1-XCUQ7lVoSVlNaxWWhzKCZ0cOL-TXvrsyjCUj1AZwmllRow88GnGAliPMmbq2uUjhD9P82zQatVEqq6u2reGLZCK9t5w1dXgDKvOO0?purpose=fullsize",
     badges: [{ text: "ВИБІР BEAUTY AI", kind: "client-choice" }],
     title: "Beauty Point",
     type: "Салон краси",
@@ -1192,7 +1167,6 @@ const nearby: CardData[] = [
   },
 
   {
-    image: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop",
     badges: [{ text: "ТОП МАЙСТЕР", kind: "top-rating" }],
     title: "Оксана Мельник",
     type: "Майстер манікюру",
@@ -1207,7 +1181,6 @@ const nearby: CardData[] = [
   },
 
   {
-    image: "https://images.openai.com/static-rsc-4/MiBKuJGrIQyXhShML9NuST3-78cy-gYZfCKvqIMJNG7Vgck14jXgW9e9P45ID300Fvi8MJXZocOmKdBspdgzAzfi66s6UdemWIk9NjO79Rwgx2MOd8gTj5Jz8S98QLaIaKsDLiqJGZYWPSPJkBv_0U1oDIP1bqLP2QXWvOa5r6BW7pRaBnPY0-IWqQIfl3vC?purpose=fullsize",
     badges: [{ text: "ТОП РЕЙТИНГ", kind: "top-rating" }],
     title: "Metro Beauty",
     type: "Салон краси",
@@ -1222,7 +1195,6 @@ const nearby: CardData[] = [
   },
 
   {
-    image: "https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop",
     badges: [{ text: "ВИБІР КЛІЄНТІВ", kind: "client-choice" }],
     title: "Дмитро Кравець",
     type: "Барбер",
@@ -1237,7 +1209,6 @@ const nearby: CardData[] = [
   },
 
   {
-    image: "https://images.pexels.com/photos/7750116/pexels-photo-7750116.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop",
     badges: [{ text: "ЧАСТО БРОНЮЮТЬ", kind: "trend" }],
     title: "Élan Studio",
     type: "Студія краси",
@@ -1253,7 +1224,6 @@ const nearby: CardData[] = [
 ];
 const topRated: CardData[] = [
   {
-    image: "https://images.pexels.com/photos/7755218/pexels-photo-7755218.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "ТОП РЕЙТИНГ", kind: "top-rating" }],
     title: "Elegant Beauty",
     type: "Салон краси",
@@ -1267,7 +1237,6 @@ const topRated: CardData[] = [
     mastersCount: "10 майстрів",
   },
   {
-    image: "https://images.pexels.com/photos/7755224/pexels-photo-7755224.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "ВИБІР КЛІЄНТІВ", kind: "client-choice" }],
     title: "Perfect Look",
     type: "Нейл-бар",
@@ -1281,7 +1250,6 @@ const topRated: CardData[] = [
     mastersCount: "3 майстри",
   },
   {
-    image: "https://images.pexels.com/photos/7755247/pexels-photo-7755247.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "НАЙКРАЩІ ВІДГУКИ", kind: "best-reviews" }],
     title: "VIP Beauty Club",
     type: "Салон краси",
@@ -1295,7 +1263,6 @@ const topRated: CardData[] = [
     mastersCount: "7 майстрів",
   },
   {
-    image: "https://images.pexels.com/photos/3997986/pexels-photo-3997986.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "НЕЗВИЧНИЙ ФОРМАТ", kind: "surprise" }],
     title: "Zen Beauty Loft",
     type: "Салон краси",
@@ -1309,7 +1276,6 @@ const topRated: CardData[] = [
     mastersCount: "4 майстри",
   },
   {
-    image: "https://images.pexels.com/photos/3985360/pexels-photo-3985360.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "РЕТЕЛЬНО ДІБРАНО", kind: "surprise" }],
     title: "Blush Beauty Bar",
     type: "Нейл-бар",
@@ -1326,7 +1292,6 @@ const topRated: CardData[] = [
 
 const fresh: CardData[] = [
   {
-    image: "https://images.pexels.com/photos/7990108/pexels-photo-7990108.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "НОВИЙ САЛОН", kind: "new-salon" }],
     title: "Fresh Beauty",
     type: "Салон краси",
@@ -1340,7 +1305,6 @@ const fresh: CardData[] = [
     mastersCount: "4 майстри",
   },
   {
-    image: "https://images.pexels.com/photos/7755296/pexels-photo-7755296.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "НОВИЙ МАЙСТЕР", kind: "new-master" }],
     title: "Kate Nails",
     type: "Майстер манікюру",
@@ -1354,7 +1318,6 @@ const fresh: CardData[] = [
     mastersCount: "1 майстер",
   },
   {
-    image: "https://images.pexels.com/photos/7755665/pexels-photo-7755665.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "НОВА ПОСЛУГА", kind: "new-service" }],
     title: "VIP Beauty Club",
     type: "Салон краси",
@@ -1368,7 +1331,6 @@ const fresh: CardData[] = [
     mastersCount: "3 майстри",
   },
   {
-    image: "https://images.pexels.com/photos/3997379/pexels-photo-3997379.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "ПРИЄДНАЛИСЬ 3 ДНІ ТОМУ", kind: "new-salon" }],
     title: "Glow Studio",
     type: "Салон краси",
@@ -1382,7 +1344,6 @@ const fresh: CardData[] = [
     mastersCount: "3 майстри",
   },
   {
-    image: "https://images.pexels.com/photos/3993445/pexels-photo-3993445.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop",
     badges: [{ text: "ПРИЄДНАВСЯ ВЧОРА", kind: "new-master" }],
     title: "Olena Style",
     type: "Майстриня стрижки",
@@ -1597,9 +1558,7 @@ function PartnerOffersCarousel({
           >
             <div
               className="partner-offer-image"
-              style={{
-                ["--partner-photo" as string]: `url(${offer.image})`,
-              }}
+              style={offer.image ? { ["--partner-photo" as string]: `url(${offer.image})` } : undefined}
             >
               <span className="partner-discount">
                 {offer.discount}
@@ -1856,7 +1815,7 @@ function KyivTopSection({
             <article className="kyiv-cover-card" key={`${card.title}-${i}`}>
               <div
                 className="kyiv-cover-photo"
-                style={{ ["--kyiv-cover-photo" as string]: `url(${card.image})` }}
+                style={card.image ? { ["--kyiv-cover-photo" as string]: `url(${card.image})` } : undefined}
               >
                 <div className="kyiv-cover-shade" />
 
@@ -2138,12 +2097,6 @@ function ReviewsSection({
   );
 }
 
-const apiImageFallbacks = [
-  "https://images.pexels.com/photos/7750114/pexels-photo-7750114.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
-  "https://images.pexels.com/photos/7195808/pexels-photo-7195808.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
-  "https://images.pexels.com/photos/7750115/pexels-photo-7750115.jpeg?auto=compress&cs=tinysrgb&w=900&h=600&fit=crop",
-];
-
 function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number): CardData {
   const status = normalize(salon.available_status ?? "");
   const location = salon.location;
@@ -2164,7 +2117,7 @@ function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number):
   const tags = serviceNames.length > 0 ? serviceNames.slice(0, 4) : [city || "Beauty services"];
   return {
     id: salon.id,
-    image: salon.logo || apiImageFallbacks[index % apiImageFallbacks.length],
+    image: salon.logo || null,
     badges: [{ text: "LIVE API", kind: "ai-match" }],
     title: salon.name,
     type: "Салон краси",
@@ -2254,7 +2207,7 @@ function SalonDetailsModal({
           <>
             <div
               className="salon-details-hero"
-              style={{ ["--salon-details-photo" as string]: `url(${salon.logo || apiImageFallbacks[salon.id % apiImageFallbacks.length]})` }}
+              style={salon.logo ? { ["--salon-details-photo" as string]: `url(${salon.logo})` } : undefined}
             >
               <div className="salon-details-hero-shade" />
               <span className="salon-details-kicker">BEAUTY AI · SALON</span>
@@ -2322,7 +2275,7 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
   const experience = master.years_of_experience ? `${master.years_of_experience} років досвіду` : undefined;
   return {
     id: master.id,
-    image: master.photo || apiImageFallbacks[index % apiImageFallbacks.length],
+    image: master.photo || null,
     badges: [{ text: "LIVE API", kind: "ai-match" }],
     title: `${master.first_name} ${master.last_name}`.trim(),
     type: `Соло майстер${serviceNames[0] ? ` · ${serviceNames[0]}` : ""}`,
@@ -2351,10 +2304,9 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
   };
 }
 
-function apiPromotionToOffer(promotion: ApiPromotion, salonName: string, index: number): PartnerOffer {
+function apiPromotionToOffer(promotion: ApiPromotion, salonName: string): PartnerOffer {
   return {
     id: promotion.id,
-    image: apiImageFallbacks[index % apiImageFallbacks.length],
     discount: `-${promotion.discount_percent}%`,
     validUntil: promotion.end_date ? `до ${new Date(promotion.end_date).toLocaleDateString("uk-UA")}` : "",
     title: promotion.name,
@@ -2672,7 +2624,7 @@ export default function App() {
           ? { masters: masters.map((master, index) => apiMasterToCard(master as ApiMaster, index)) }
           : {}),
         ...(promotionsResult.status === "fulfilled"
-          ? { promotions: promotions.map((promotion, index) => apiPromotionToOffer(promotion as ApiPromotion, salonNames.get((promotion as ApiPromotion).salon) ?? "", index)) }
+          ? { promotions: promotions.map((promotion) => apiPromotionToOffer(promotion as ApiPromotion, salonNames.get((promotion as ApiPromotion).salon) ?? "")) }
           : {}),
         ...(reviewsResult.status === "fulfilled" ? { reviews: reviews as ApiReview[] } : {}),
       });
@@ -2763,7 +2715,7 @@ export default function App() {
           user={user}
           lang={lang}
           onHome={() => setView("home")}
-          onRoleChange={(role) => setUser((prev) => prev ? { ...prev, role, avatar: roleAvatars[role] } : prev)}
+          onRoleChange={(role) => setUser((prev) => prev ? { ...prev, role, avatar: null } : prev)}
         />
       </div>
     );
@@ -2800,7 +2752,7 @@ export default function App() {
                 aria-label={lang === "ua" ? "Меню акаунта" : "Account menu"}
                 aria-expanded={accountMenuOpen}
               >
-                <img src={user.avatar} alt={user.name} />
+                {user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}
               </button>
 
               {accountMenuOpen && (

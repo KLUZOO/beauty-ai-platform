@@ -2,22 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import type { AuthRole, Lang, MockUser } from "../types";
 import { apiRequest, apiResults, type ApiAppointment, type ApiFavoriteMaster } from "../../api";
 
-const masterImages = [
-  "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop",
-  "https://images.pexels.com/photos/3765114/pexels-photo-3765114.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop",
-  "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=500&h=500&fit=crop",
-];
-
-const likedImages = [
-  "https://images.pexels.com/photos/3997379/pexels-photo-3997379.jpeg?auto=compress&cs=tinysrgb&w=900&h=650&fit=crop",
-  "https://images.pexels.com/photos/3764014/pexels-photo-3764014.jpeg?auto=compress&cs=tinysrgb&w=900&h=650&fit=crop",
-  "https://images.pexels.com/photos/705255/pexels-photo-705255.jpeg?auto=compress&cs=tinysrgb&w=900&h=650&fit=crop",
-  "https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?auto=compress&cs=tinysrgb&w=900&h=650&fit=crop",
-];
-
-const bookingImage =
-  "https://images.pexels.com/photos/705255/pexels-photo-705255.jpeg?auto=compress&cs=tinysrgb&w=1000&h=700&fit=crop";
-
 type Review = {
   appointmentId?: number;
   master: number;
@@ -290,7 +274,7 @@ export default function ClientDashboard({
             </div>
             <button className="client-notification-btn" type="button" aria-label={ua ? "Сповіщення" : "Notifications"}>♧<span></span></button>
             <button className="client-profile-trigger" type="button" onClick={() => setTab("profile")}>
-              <img src={user.avatar} alt={user.name} /><span>{firstName}</span><b>⌄</b>
+              {user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}<span>{firstName}</span><b>⌄</b>
             </button>
           </div>
         </header>
@@ -304,8 +288,8 @@ export default function ClientDashboard({
               </div>
               {upcomingAppointment ? (
                 <article className="client-booking-card">
-                  <div className="client-booking-photo-wrap">
-                    <img className="client-booking-photo" src={bookingImage} alt={ua ? "Ваш запис" : "Your booking"} />
+                  <div className="client-booking-photo-wrap client-booking-no-photo" aria-hidden="true">
+                    <span>✦</span>
                     <span className="client-booking-soon">{appointmentStatus(upcomingAppointment.status, lang)}</span>
                   </div>
                   <div className="client-booking-info">
@@ -332,7 +316,7 @@ export default function ClientDashboard({
                   {latestVisit ? (
                     <>
                       <div className="client-review-mainline">
-                        <div className="client-review-author"><img src={user.avatar} alt={user.name} /><div><b>{ua ? "Наталя С." : "Natalia S."}</b><span>{latestVisit.date}</span></div></div>
+                        <div className="client-review-author">{user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}<div><b>{ua ? "Наталя С." : "Natalia S."}</b><span>{latestVisit.date}</span></div></div>
                         <div className="client-review-score"><span>★★★★★</span><strong>5.0</strong></div>
                       </div>
                       <p>{ratings[0]?.comment || (ua ? "Дякую за ідеальний манікюр! 💜" : "Thank you for the perfect manicure! 💜")}</p>
@@ -355,7 +339,7 @@ export default function ClientDashboard({
                 <div className="client-favorite-masters-list">
                   {favoriteMasters.map((master) => (
                     <article className="client-master-row" key={master.name}>
-                      <img src={master.image} alt={master.name} />
+                      {master.image ? <img src={master.image} alt={master.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}
                       <div><b>{master.name}</b><span>{master.type} <i>•</i> {master.rating.toFixed(1)}</span></div>
                       <strong>♥</strong>
                     </article>
@@ -371,7 +355,7 @@ export default function ClientDashboard({
                   {liked.map((item) => (
                     <article className="client-liked-card" key={item.name}>
                       <div className="client-liked-image-wrap">
-                        <img src={item.image} alt={item.name} />
+                        {item.image ? <img src={item.image} alt={item.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}
                         <span className="client-ai-match">AI MATCH {item.match}%</span>
                         <button className="client-heart-btn active" type="button" aria-label={ua ? "Прибрати з обраного" : "Remove from favourites"}>♡</button>
                       </div>
@@ -389,7 +373,7 @@ export default function ClientDashboard({
         ) : (
           <section className="client-profile-card client-surface-panel">
             <div className="client-section-head client-profile-head"><div><h2>{ua ? "Профіль" : "Profile"}</h2><p>{ua ? "Особисті дані та налаштування акаунта" : "Personal details and account settings"}</p></div></div>
-            <div className="profile-photo-row"><div className="dashboard-avatar profile-avatar"><img src={user.avatar} alt={user.name} /></div><button type="button" className="booking-action-btn ghost">{ua ? "Змінити фото" : "Change photo"}</button></div>
+            <div className="profile-photo-row"><div className="dashboard-avatar profile-avatar">{user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}</div><button type="button" className="booking-action-btn ghost">{ua ? "Змінити фото" : "Change photo"}</button></div>
             <div className="profile-fields-grid">
               <label><span>{ua ? "Ім'я" : "Name"}</span><input type="text" value={profileName} onChange={(event) => setProfileName(event.target.value)} /></label>
               <label><span>{ua ? "Телефон" : "Phone"}</span><input type="tel" value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} /></label>
