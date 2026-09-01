@@ -90,7 +90,7 @@ export type ApiMaster = {
   id: number;
   first_name: string;
   last_name: string;
-  photo?: string;
+  photo?: string | null;
   average_rating?: number;
   total_reviews?: number;
   years_of_experience?: number;
