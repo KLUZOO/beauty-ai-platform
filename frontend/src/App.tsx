@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 import MapSection from "./MapSection";
 import CategoryFilters from "./CategoryFilters";
-import FilterBar from './FilterBar';
-import { DEFAULT_FILTERS, type FilterState } from './filterTypes';
+import FilterBar from "./FilterBar";
+import { DEFAULT_FILTERS, type FilterState } from "./filterTypes";
 import beautyAISparkles from "./assets/beauty-ai-sparkles.svg";
 import DashboardShell from "./dashboard/DashboardShell";
 import {
@@ -82,9 +82,25 @@ const DISTRICT_TERMS: Record<string, string[]> = {
   holosiivskyi: ["голосіїв"],
 };
 const SEARCH_STOP_WORDS = new Set([
-  "у", "в", "на", "та", "й", "і", "з", "зі", "до", "для",
-  "сьогодні", "завтра", "today", "tomorrow", "this", "week",
-  "київ", "києва", "kyiv",
+  "у",
+  "в",
+  "на",
+  "та",
+  "й",
+  "і",
+  "з",
+  "зі",
+  "до",
+  "для",
+  "сьогодні",
+  "завтра",
+  "today",
+  "tomorrow",
+  "this",
+  "week",
+  "київ",
+  "києва",
+  "kyiv",
 ]);
 
 function normalize(value: string) {
@@ -110,38 +126,92 @@ function matchesSearch(value: string, query: string) {
     .split(/[^\p{L}\p{N}]+/u)
     .filter((token) => token.length > 1 && !SEARCH_STOP_WORDS.has(token));
 
-  return tokens.every((token) =>
-    normalizedValue.includes(token) ||
-    (token.length > 3 && normalizedValue.includes(token.slice(0, -1))),
+  return tokens.every(
+    (token) =>
+      normalizedValue.includes(token) ||
+      (token.length > 3 && normalizedValue.includes(token.slice(0, -1))),
   );
 }
 
 function matchesCommonFilters(
-  item: Pick<CardData, "title" | "type" | "rating" | "district" | "distance" | "priceFrom" | "tags" | "openNow" | "variant">,
+  item: Pick<
+    CardData,
+    | "title"
+    | "type"
+    | "rating"
+    | "district"
+    | "distance"
+    | "priceFrom"
+    | "tags"
+    | "openNow"
+    | "variant"
+  >,
   filters: FilterState,
   category: string,
   searchQuery: string,
 ) {
-  const searchableText = [item.title, item.type, item.district, ...item.tags].join(" ");
+  const searchableText = [
+    item.title,
+    item.type,
+    item.district,
+    ...item.tags,
+  ].join(" ");
   const price = numberFrom(item.priceFrom);
   const distance = numberFrom(item.distance);
   const serviceText = [item.title, item.type, ...item.tags].join(" ");
-  const isSolo = item.variant === "solo" || matchesTerms(item.type, ["майстер", "master"]);
+  const isSolo =
+    item.variant === "solo" || matchesTerms(item.type, ["майстер", "master"]);
   const venueText = normalize(item.type);
 
-  if (searchQuery.trim() && !matchesSearch(searchableText, searchQuery)) return false;
-  if (category !== "all" && !matchesTerms(serviceText, CATEGORY_TERMS[category] ?? [])) return false;
-  if (item.priceFrom !== "—" && filters.priceMin && price < Number(filters.priceMin)) return false;
-  if (item.priceFrom !== "—" && filters.priceMax && price > Number(filters.priceMax)) return false;
-  if (filters.rating !== "any" && item.rating < Number(filters.rating.replace("from", "")) / 10) return false;
-  if (filters.distance !== "any" && distance > Number(filters.distance.replace("to", "").replace("km", ""))) return false;
+  if (searchQuery.trim() && !matchesSearch(searchableText, searchQuery))
+    return false;
+  if (
+    category !== "all" &&
+    !matchesTerms(serviceText, CATEGORY_TERMS[category] ?? [])
+  )
+    return false;
+  if (
+    item.priceFrom !== "—" &&
+    filters.priceMin &&
+    price < Number(filters.priceMin)
+  )
+    return false;
+  if (
+    item.priceFrom !== "—" &&
+    filters.priceMax &&
+    price > Number(filters.priceMax)
+  )
+    return false;
+  if (
+    filters.rating !== "any" &&
+    item.rating < Number(filters.rating.replace("from", "")) / 10
+  )
+    return false;
+  if (
+    filters.distance !== "any" &&
+    distance > Number(filters.distance.replace("to", "").replace("km", ""))
+  )
+    return false;
   if (filters.city !== "any" && filters.city !== "kyiv") return false;
-  if (filters.district !== "any" && !matchesTerms(item.district, DISTRICT_TERMS[filters.district] ?? [])) return false;
-  if (filters.service !== "any" && !matchesTerms(serviceText, CATEGORY_TERMS[filters.service] ?? [])) return false;
+  if (
+    filters.district !== "any" &&
+    !matchesTerms(item.district, DISTRICT_TERMS[filters.district] ?? [])
+  )
+    return false;
+  if (
+    filters.service !== "any" &&
+    !matchesTerms(serviceText, CATEGORY_TERMS[filters.service] ?? [])
+  )
+    return false;
   if (filters.venueType === "solo" && !isSolo) return false;
-  if (filters.venueType === "studio" && (isSolo || !venueText.includes("студи"))) return false;
+  if (
+    filters.venueType === "studio" &&
+    (isSolo || !venueText.includes("студи"))
+  )
+    return false;
   if (filters.venueType === "salon" && isSolo) return false;
-  if (filters.availability === "today" && !item.openNow && !isSolo) return false;
+  if (filters.availability === "today" && !item.openNow && !isSolo)
+    return false;
 
   return true;
 }
@@ -157,19 +227,45 @@ function matchesPartnerFilters(
   const price = numberFrom(offer.newPrice);
   const distance = numberFrom(offer.distance);
 
-  if (searchQuery.trim() && !matchesSearch(searchableText, searchQuery)) return false;
-  if (category !== "all" && !matchesTerms(serviceText, CATEGORY_TERMS[category] ?? [])) return false;
-  if (!offer.isDiscountOnly && filters.priceMin && price < Number(filters.priceMin)) return false;
-  if (!offer.isDiscountOnly && filters.priceMax && price > Number(filters.priceMax)) return false;
-  if (filters.distance !== "any" && distance > Number(filters.distance.replace("to", "").replace("km", ""))) return false;
+  if (searchQuery.trim() && !matchesSearch(searchableText, searchQuery))
+    return false;
+  if (
+    category !== "all" &&
+    !matchesTerms(serviceText, CATEGORY_TERMS[category] ?? [])
+  )
+    return false;
+  if (
+    !offer.isDiscountOnly &&
+    filters.priceMin &&
+    price < Number(filters.priceMin)
+  )
+    return false;
+  if (
+    !offer.isDiscountOnly &&
+    filters.priceMax &&
+    price > Number(filters.priceMax)
+  )
+    return false;
+  if (
+    filters.distance !== "any" &&
+    distance > Number(filters.distance.replace("to", "").replace("km", ""))
+  )
+    return false;
   if (filters.city !== "any" && filters.city !== "kyiv") return false;
-  if (filters.district !== "any" && !matchesTerms(offer.district, DISTRICT_TERMS[filters.district] ?? [])) return false;
-  if (filters.service !== "any" && !matchesTerms(serviceText, CATEGORY_TERMS[filters.service] ?? [])) return false;
+  if (
+    filters.district !== "any" &&
+    !matchesTerms(offer.district, DISTRICT_TERMS[filters.district] ?? [])
+  )
+    return false;
+  if (
+    filters.service !== "any" &&
+    !matchesTerms(serviceText, CATEGORY_TERMS[filters.service] ?? [])
+  )
+    return false;
   if (filters.availability === "today" && !offer.openNow) return false;
 
   return true;
 }
-
 
 type PartnerOffer = {
   id?: number;
@@ -188,7 +284,6 @@ type PartnerOffer = {
   coordinates?: [number, number];
 };
 
-
 type SelectedMapLocation = {
   name: string;
   district: string;
@@ -201,10 +296,10 @@ type Lang = "ua" | "en";
 
 const dict = {
   ua: {
-    nav: ["Салони","Майстри", "Акції", "Про Beauty AI"],
+    nav: ["Салони", "Майстри", "Акції", "Про Beauty AI"],
     loginGoogle: "Увійти",
-    heroTitle1: "ЗНАЙДИ СВІЙ",   // було "Знайдіть свого майстра"
-    heroTitle2: "BEAUTY MATCH",          // новий рядок
+    heroTitle1: "ЗНАЙДИ СВІЙ", // було "Знайдіть свого майстра"
+    heroTitle2: "BEAUTY MATCH", // новий рядок
     heroTitle3: "ЗА ДОПОМОГОЮ AI",
     heroEyebrow: "ТВІЙ РОЗУМНИЙ ПОШУК КРАСИ",
     heroSubtitle: "Опиши, що тобі потрібно — AI підбере майстра під твій запит",
@@ -212,21 +307,41 @@ const dict = {
     searchBtn: "Знайти",
     filters: "Фільтри",
     partnersLink: "Про партнерів>",
-    footer: "Beauty AI аналізує ваші запити та обирає найкращі варіанти саме для вас",
+    footer:
+      "Beauty AI аналізує ваші запити та обирає найкращі варіанти саме для вас",
     noResults: "За цими параметрами нічого не знайдено",
     sections: {
-      recommendations: { title: "Салони для вас", subtitle: "Найкращі збіги за рейтингом, ціною та доступністю" },
-      soloMasters: { title: "Майстри для вас", subtitle: "Персональні рекомендації майстрів під ваш запит" },
-      partners: { title: "Пропозиції від партнерів", subtitle: "Ексклюзивні знижки та акції" },
-      nearby: { title: "Найкращі в Києві", subtitle: "Салони та майстри з найвищими показниками" },
-      topRated: { title: "Варто спробувати", subtitle: "Щось нове, що може вас зацікавити" },
-      fresh: { title: "Новинки на платформі", subtitle: "Нові майстри та салони для вас" },
+      recommendations: {
+        title: "Салони для вас",
+        subtitle: "Найкращі збіги за рейтингом, ціною та доступністю",
+      },
+      soloMasters: {
+        title: "Майстри для вас",
+        subtitle: "Персональні рекомендації майстрів під ваш запит",
+      },
+      partners: {
+        title: "Пропозиції від партнерів",
+        subtitle: "Ексклюзивні знижки та акції",
+      },
+      nearby: {
+        title: "Найкращі в Києві",
+        subtitle: "Салони та майстри з найвищими показниками",
+      },
+      topRated: {
+        title: "Варто спробувати",
+        subtitle: "Щось нове, що може вас зацікавити",
+      },
+      fresh: {
+        title: "Новинки на платформі",
+        subtitle: "Нові майстри та салони для вас",
+      },
     },
     cta: "Записатися",
     viewSalon: "Дивитися салон",
     inSalon: "у салоні",
     avgCheck: "Середній чек",
-    about: {                                    // ← тут вставляєш новий блок
+    about: {
+      // ← тут вставляєш новий блок
       title: "Про Beauty AI",
       description:
         "Beauty AI — сервіс, який допомагає знайти майстра краси за лічені секунди. Опишіть, що вам потрібно, а наш AI підбере найкращі салони та майстрів поруч — з урахуванням рейтингу, цін і вільних вікон запису.",
@@ -249,21 +364,41 @@ const dict = {
     searchBtn: "Search",
     filters: "Filters",
     partnersLink: "About partners",
-    footer: "Beauty AI analyzes your requests and picks the best options just for you",
+    footer:
+      "Beauty AI analyzes your requests and picks the best options just for you",
     noResults: "Nothing found for these filters",
     sections: {
-      recommendations: { title: "Salons For You", subtitle: "Best match for your request" },
-      soloMasters: { title: "Masters For You", subtitle: "AI picked these masters for your request" },
-      partners: { title: "Partner Offers", subtitle: "Exclusive discounts and promotions" },
-      nearby: { title: "Best in Kyiv", subtitle: "Top salons and masters by overall performance" },
-      topRated: { title: "Worth Trying", subtitle: "Something new that might catch your eye" },
-      fresh: { title: "New on the Platform", subtitle: "New masters and salons for you" },
+      recommendations: {
+        title: "Salons For You",
+        subtitle: "Best match for your request",
+      },
+      soloMasters: {
+        title: "Masters For You",
+        subtitle: "AI picked these masters for your request",
+      },
+      partners: {
+        title: "Partner Offers",
+        subtitle: "Exclusive discounts and promotions",
+      },
+      nearby: {
+        title: "Best in Kyiv",
+        subtitle: "Top salons and masters by overall performance",
+      },
+      topRated: {
+        title: "Worth Trying",
+        subtitle: "Something new that might catch your eye",
+      },
+      fresh: {
+        title: "New on the Platform",
+        subtitle: "New masters and salons for you",
+      },
     },
     cta: "Book now",
     viewSalon: "View salon",
     inSalon: "at the salon",
     avgCheck: "Average check",
-    about: {                                    // ← і тут теж
+    about: {
+      // ← і тут теж
       title: "About Beauty AI",
       description:
         "Beauty AI is a service that helps you find a beauty master in seconds. Describe what you need, and our AI will pick the best salons and masters nearby — based on ratings, prices, and open booking slots.",
@@ -302,7 +437,11 @@ function resolveRoleFromProfile(profile: any): AuthRole {
   return "client";
 }
 
-function profileToMockUser(profile: ApiUserProfile, lang: Lang, fallbackEmail = ""): MockUser {
+function profileToMockUser(
+  profile: ApiUserProfile,
+  lang: Lang,
+  fallbackEmail = "",
+): MockUser {
   const role = resolveRoleFromProfile(profile);
   const name = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
 
@@ -317,12 +456,19 @@ function profileToMockUser(profile: ApiUserProfile, lang: Lang, fallbackEmail = 
 function getAuthErrorMessage(error: unknown, lang: Lang, fallback: string) {
   const message = error instanceof Error ? error.message : "";
   const normalizedMessage = message.toLowerCase();
-  if (normalizedMessage.includes("no active account") || normalizedMessage.includes("not active")) {
+  if (
+    normalizedMessage.includes("no active account") ||
+    normalizedMessage.includes("not active")
+  ) {
     return lang === "ua"
       ? "Акаунт ще не активний. Підтвердіть email у листі від Beauty AI, а потім спробуйте увійти ще раз."
       : "Your account is not active yet. Confirm your email using the Beauty AI message, then try signing in again.";
   }
-  if (normalizedMessage.includes("email") && (normalizedMessage.includes("already") || normalizedMessage.includes("exists"))) {
+  if (
+    normalizedMessage.includes("email") &&
+    (normalizedMessage.includes("already") ||
+      normalizedMessage.includes("exists"))
+  ) {
     return lang === "ua"
       ? "Цей email уже зареєстрований. Увійдіть у наявний акаунт або використайте іншу адресу."
       : "This email is already registered. Sign in to the existing account or use another address.";
@@ -352,18 +498,26 @@ function AuthModal({
 }) {
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [role, setRole] = useState<Exclude<AuthRole, "admin">>(initialRole);
-  const [partnerKind] = useState<"solo" | "salon" | undefined>(initialPartnerKind);
+  const [partnerKind] = useState<"solo" | "salon" | undefined>(
+    initialPartnerKind,
+  );
   const [businessName, setBusinessName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState<string | null>(initialError ?? null);
-  const [authSuccess, setAuthSuccess] = useState<string | null>(initialSuccess ?? null);
+  const [authError, setAuthError] = useState<string | null>(
+    initialError ?? null,
+  );
+  const [authSuccess, setAuthSuccess] = useState<string | null>(
+    initialSuccess ?? null,
+  );
   const [authLoading, setAuthLoading] = useState(false);
   const [googlePickerOpen, setGooglePickerOpen] = useState(false);
-  const [googlePickingRole, setGooglePickingRole] = useState<AuthRole | null>(null);
+  const [googlePickingRole, setGooglePickingRole] = useState<AuthRole | null>(
+    null,
+  );
 
   const ua = lang === "ua";
 
@@ -380,10 +534,14 @@ function AuthModal({
         authRole === "master"
           ? partnerKind === "salon" && businessName.trim()
             ? businessName.trim()
-            : ua ? "Майстер Beauty AI" : "Beauty AI Master"
+            : ua
+              ? "Майстер Beauty AI"
+              : "Beauty AI Master"
           : authRole === "admin"
             ? "Beauty AI Admin"
-            : ua ? "Клієнт Beauty AI" : "Beauty AI Client",
+            : ua
+              ? "Клієнт Beauty AI"
+              : "Beauty AI Client",
       email: email || fallbackEmail,
       role: authRole,
       avatar: null,
@@ -401,7 +559,15 @@ function AuthModal({
       const profile = await getMe();
       onAuthenticated(profileToMockUser(profile, lang, normalizedEmail));
     } catch (err: any) {
-      setAuthError(getAuthErrorMessage(err, lang, ua ? "Сталася помилка. Спробуйте ще раз." : "Something went wrong. Try again."));
+      setAuthError(
+        getAuthErrorMessage(
+          err,
+          lang,
+          ua
+            ? "Сталася помилка. Спробуйте ще раз."
+            : "Something went wrong. Try again.",
+        ),
+      );
     } finally {
       setAuthLoading(false);
     }
@@ -429,16 +595,42 @@ function AuthModal({
           : "Your account was created. If email verification is required, check your inbox, then sign in.",
       );
     } catch (err: any) {
-      setAuthError(getAuthErrorMessage(err, lang, ua ? "Не вдалося створити акаунт" : "Could not create account"));
+      setAuthError(
+        getAuthErrorMessage(
+          err,
+          lang,
+          ua ? "Не вдалося створити акаунт" : "Could not create account",
+        ),
+      );
     } finally {
       setAuthLoading(false);
     }
   };
 
-  const fakeGoogleAccounts: { role: AuthRole; name: string; email: string; avatar: null }[] = [
-    { role: "client", name: ua ? "Ірина Клієнтка" : "Irene Client", email: "irene.client@gmail.com", avatar: null },
-    { role: "master", name: ua ? "Майстер Beauty" : "Beauty Master", email: "beauty.master@gmail.com", avatar: null },
-    { role: "admin", name: ua ? "Адмін Beauty AI" : "Beauty AI Admin", email: "admin.beautyai@gmail.com", avatar: null },
+  const fakeGoogleAccounts: {
+    role: AuthRole;
+    name: string;
+    email: string;
+    avatar: null;
+  }[] = [
+    {
+      role: "client",
+      name: ua ? "Ірина Клієнтка" : "Irene Client",
+      email: "irene.client@gmail.com",
+      avatar: null,
+    },
+    {
+      role: "master",
+      name: ua ? "Майстер Beauty" : "Beauty Master",
+      email: "beauty.master@gmail.com",
+      avatar: null,
+    },
+    {
+      role: "admin",
+      name: ua ? "Адмін Beauty AI" : "Beauty AI Admin",
+      email: "admin.beautyai@gmail.com",
+      avatar: null,
+    },
   ];
 
   const pickGoogleAccount = (account: (typeof fakeGoogleAccounts)[number]) => {
@@ -474,7 +666,12 @@ function AuthModal({
         aria-labelledby="auth-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button className="auth-close" type="button" onClick={onClose} aria-label={ua ? "Закрити" : "Close"}>
+        <button
+          className="auth-close"
+          type="button"
+          onClick={onClose}
+          aria-label={ua ? "Закрити" : "Close"}
+        >
           ×
         </button>
 
@@ -482,13 +679,21 @@ function AuthModal({
           <span className="auth-kicker">✦ BEAUTY AI</span>
           <h2 id="auth-title">
             {mode === "login"
-              ? ua ? "Раді бачити вас знову" : "Welcome back"
-              : ua ? "Створіть свій профіль" : "Create your profile"}
+              ? ua
+                ? "Раді бачити вас знову"
+                : "Welcome back"
+              : ua
+                ? "Створіть свій профіль"
+                : "Create your profile"}
           </h2>
           <p>
             {mode === "login"
-              ? ua ? "Увійдіть, щоб керувати записами, обраним і профілем." : "Sign in to manage bookings, favourites and your profile."
-              : ua ? "Створіть акаунт, щоб керувати записами, обраним і профілем." : "Create an account to manage bookings, favourites and your profile."}
+              ? ua
+                ? "Увійдіть, щоб керувати записами, обраним і профілем."
+                : "Sign in to manage bookings, favourites and your profile."
+              : ua
+                ? "Створіть акаунт, щоб керувати записами, обраним і профілем."
+                : "Create an account to manage bookings, favourites and your profile."}
           </p>
         </div>
 
@@ -518,11 +723,22 @@ function AuthModal({
         </div>
 
         {mode === "register" && (
-          <div className="auth-role-switch" aria-label={ua ? "Тип профілю" : "Profile type"}>
-            <button className={role === "client" ? "active" : ""} type="button" onClick={() => setRole("client")}>
+          <div
+            className="auth-role-switch"
+            aria-label={ua ? "Тип профілю" : "Profile type"}
+          >
+            <button
+              className={role === "client" ? "active" : ""}
+              type="button"
+              onClick={() => setRole("client")}
+            >
               {ua ? "Я клієнт" : "I'm a client"}
             </button>
-            <button className={role === "master" ? "active" : ""} type="button" onClick={() => setRole("master")}>
+            <button
+              className={role === "master" ? "active" : ""}
+              type="button"
+              onClick={() => setRole("master")}
+            >
               {ua ? "Я майстер" : "I'm a master"}
             </button>
           </div>
@@ -534,16 +750,34 @@ function AuthModal({
               <div className="auth-form-row">
                 <label>
                   <span>{ua ? "Ім'я" : "First name"}</span>
-                <input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
+                  <input
+                    type="text"
+                    autoComplete="given-name"
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    required
+                  />
                 </label>
                 <label>
                   <span>{ua ? "Прізвище" : "Last name"}</span>
-                <input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+                  <input
+                    type="text"
+                    autoComplete="family-name"
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    required
+                  />
                 </label>
               </div>
               <label>
                 <span>{ua ? "Телефон" : "Phone"}</span>
-                <input type="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required />
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  required
+                />
               </label>
             </>
           )}
@@ -556,7 +790,11 @@ function AuthModal({
                     type="text"
                     value={businessName}
                     onChange={(event) => setBusinessName(event.target.value)}
-                    placeholder={ua ? "Наприклад, Luna Beauty House" : "e.g. Luna Beauty House"}
+                    placeholder={
+                      ua
+                        ? "Наприклад, Luna Beauty House"
+                        : "e.g. Luna Beauty House"
+                    }
                     required
                   />
                 </label>
@@ -566,13 +804,22 @@ function AuthModal({
 
           <label>
             <span>Email</span>
-            <input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required />
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="name@example.com"
+              required
+            />
           </label>
           <label>
             <span>{ua ? "Пароль" : "Password"}</span>
             <input
               type="password"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoComplete={
+                mode === "login" ? "current-password" : "new-password"
+              }
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
@@ -593,17 +840,31 @@ function AuthModal({
           <button className="auth-primary" type="submit" disabled={authLoading}>
             {mode === "login"
               ? authLoading
-                ? (ua ? "Входимо…" : "Signing in…")
-                : (ua ? "Увійти" : "Sign in")
-                : authLoading
-                  ? (ua ? "Створюємо…" : "Creating…")
-                  : (ua ? "Створити акаунт" : "Create account")}
+                ? ua
+                  ? "Входимо…"
+                  : "Signing in…"
+                : ua
+                  ? "Увійти"
+                  : "Sign in"
+              : authLoading
+                ? ua
+                  ? "Створюємо…"
+                  : "Creating…"
+                : ua
+                  ? "Створити акаунт"
+                  : "Create account"}
           </button>
         </form>
 
-        <div className="auth-divider"><span>{ua ? "або" : "or"}</span></div>
+        <div className="auth-divider">
+          <span>{ua ? "або" : "or"}</span>
+        </div>
 
-        <button className="auth-google" type="button" onClick={() => setGooglePickerOpen(true)}>
+        <button
+          className="auth-google"
+          type="button"
+          onClick={() => setGooglePickerOpen(true)}
+        >
           <span className="google-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <path
@@ -628,9 +889,9 @@ function AuthModal({
         </button>
 
         <p className="auth-demo-note">
-           {ua
-             ? "Email/пароль і реєстрація підключені до бекенду. Google потребує налаштованого OAuth ID token."
-             : "Email/password sign-in and registration use the backend. Google needs a configured OAuth ID token."}
+          {ua
+            ? "Email/пароль і реєстрація підключені до бекенду. Google потребує налаштованого OAuth ID token."
+            : "Email/password sign-in and registration use the backend. Google needs a configured OAuth ID token."}
         </p>
       </div>
 
@@ -640,7 +901,10 @@ function AuthModal({
           role="presentation"
           onMouseDown={() => !googlePickingRole && setGooglePickerOpen(false)}
         >
-          <div className="google-picker-window" onMouseDown={(event) => event.stopPropagation()}>
+          <div
+            className="google-picker-window"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <div className="google-picker-titlebar">
               <span className="google-picker-url">accounts.google.com</span>
               <button
@@ -657,14 +921,28 @@ function AuthModal({
             <div className="google-picker-body">
               <span className="google-mark google-mark-lg" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.92h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.41Z" />
-                  <path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.62-2.36l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z" />
-                  <path fill="#FBBC05" d="M6.39 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.11-1.32.31-1.93V7.45H3.04A10 10 0 0 0 2 12c0 1.61.38 3.14 1.04 4.55l3.35-2.62Z" />
-                  <path fill="#EA4335" d="M12 5.94c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.63 9.63 0 0 0 12 2a10 10 0 0 0-8.96 5.45l3.35 2.62C7.18 7.7 9.39 5.94 12 5.94Z" />
+                  <path
+                    fill="#4285F4"
+                    d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.92h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.41Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 22c2.7 0 4.97-.9 6.62-2.36l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M6.39 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.11-1.32.31-1.93V7.45H3.04A10 10 0 0 0 2 12c0 1.61.38 3.14 1.04 4.55l3.35-2.62Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.94c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.63 9.63 0 0 0 12 2a10 10 0 0 0-8.96 5.45l3.35 2.62C7.18 7.7 9.39 5.94 12 5.94Z"
+                  />
                 </svg>
               </span>
               <h3>{ua ? "Оберіть обліковий запис" : "Choose an account"}</h3>
-              <p>{ua ? "щоб продовжити в Beauty AI" : "to continue to Beauty AI"}</p>
+              <p>
+                {ua ? "щоб продовжити в Beauty AI" : "to continue to Beauty AI"}
+              </p>
 
               <div className="google-picker-list">
                 {fakeGoogleAccounts.map((account) => {
@@ -674,15 +952,28 @@ function AuthModal({
                       key={account.email}
                       type="button"
                       className="google-picker-account"
-                      onClick={() => !googlePickingRole && pickGoogleAccount(account)}
+                      onClick={() =>
+                        !googlePickingRole && pickGoogleAccount(account)
+                      }
                       disabled={!!googlePickingRole && !isPicking}
                     >
-                      {account.avatar ? <img src={account.avatar} alt={account.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}
+                      {account.avatar ? (
+                        <img src={account.avatar} alt={account.name} />
+                      ) : (
+                        <span className="image-placeholder" aria-hidden="true">
+                          ✦
+                        </span>
+                      )}
                       <span className="google-picker-account-info">
                         <b>{account.name}</b>
                         <span>{account.email}</span>
                       </span>
-                      {isPicking && <span className="google-picker-spinner" aria-hidden="true" />}
+                      {isPicking && (
+                        <span
+                          className="google-picker-spinner"
+                          aria-hidden="true"
+                        />
+                      )}
                     </button>
                   );
                 })}
@@ -713,7 +1004,16 @@ function FavButton() {
         setActive((prev) => !prev);
       }}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
       </svg>
     </button>
@@ -733,7 +1033,12 @@ function Card({
   t: Translations;
   hideTags?: boolean;
   hideReason?: boolean;
-  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
+  onLocationClick?: (
+    name: string,
+    district: string,
+    distance: string,
+    coordinates?: [number, number],
+  ) => void;
   onBookClick?: (data: CardData) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
@@ -744,7 +1049,11 @@ function Card({
     <div className={`card ${isSolo ? "card-solo" : ""}`}>
       <div
         className={`card-image ${isSolo ? "card-image-solo" : ""}`}
-        style={data.image ? { ['--card-photo' as string]: `url(${data.image})` } : undefined}
+        style={
+          data.image
+            ? { ["--card-photo" as string]: `url(${data.image})` }
+            : undefined
+        }
       >
         <div className="card-badges">
           {data.badges.map((b) => (
@@ -772,7 +1081,14 @@ function Card({
           <button
             type="button"
             className="card-location-link"
-            onClick={() => onLocationClick?.(data.title, data.district, data.distance, data.coordinates)}
+            onClick={() =>
+              onLocationClick?.(
+                data.title,
+                data.district,
+                data.distance,
+                data.coordinates,
+              )
+            }
             title="Показати на карті"
           >
             <span className="district-pin">
@@ -793,8 +1109,12 @@ function Card({
             </span>
             <span>· {data.distance}</span>
           </button>
-          {data.openNow && !isSolo && <span className="open-now">· Відкрито зараз</span>}
-          {isSolo && <span className="solo-availability">· Є вікна сьогодні</span>}
+          {data.openNow && !isSolo && (
+            <span className="open-now">· Відкрито зараз</span>
+          )}
+          {isSolo && (
+            <span className="solo-availability">· Є вікна сьогодні</span>
+          )}
         </div>
 
         {!hideTags && (
@@ -809,17 +1129,35 @@ function Card({
 
         <div className="card-footer">
           <div className="price-block">
-            <div className="price">{data.priceFrom === "—" ? (t.avgCheck === "Середній чек" ? "Ціна за запитом" : "Price on request") : <>від {data.priceFrom} грн</>}</div>
+            <div className="price">
+              {data.priceFrom === "—" ? (
+                t.avgCheck === "Середній чек" ? (
+                  "Ціна за запитом"
+                ) : (
+                  "Price on request"
+                )
+              ) : (
+                <>від {data.priceFrom} грн</>
+              )}
+            </div>
             <div className="avg">{data.avgCheck ?? t.avgCheck}</div>
           </div>
           <div className="masters-block">
-            {(data.experience ?? data.mastersCount) && <div>🕐 {data.experience ?? data.mastersCount}</div>}
+            {(data.experience ?? data.mastersCount) && (
+              <div>🕐 {data.experience ?? data.mastersCount}</div>
+            )}
             <div>{data.locationNote ?? t.inSalon}</div>
           </div>
         </div>
 
         <div className="card-cta-row">
-          <button className="cta-btn" type="button" onClick={() => onBookClick?.(data)}>{t.cta}</button>
+          <button
+            className="cta-btn"
+            type="button"
+            onClick={() => onBookClick?.(data)}
+          >
+            {t.cta}
+          </button>
           {!isSolo && data.id && onSalonDetailsClick ? (
             <button
               className="view-link view-link-button"
@@ -844,7 +1182,9 @@ function Card({
               aria-expanded={showReason}
             >
               <span className="ai-reason-label">✦ Чому рекомендуємо?</span>
-              <span className="ai-reason-chevron" aria-hidden="true">⌄</span>
+              <span className="ai-reason-chevron" aria-hidden="true">
+                ⌄
+              </span>
             </button>
 
             <div className="ai-reason-content">
@@ -858,7 +1198,6 @@ function Card({
     </div>
   );
 }
-
 
 const recommendations: CardData[] = [
   {
@@ -936,7 +1275,10 @@ const recommendations: CardData[] = [
     why: "Сильні відгуки, зручна локація та послуги, що відповідають вашому запиту",
   },
   {
-    badges: [{ text: "AI MATCH 85%", kind: "ai-match" }, { text: "НОВИНКА", kind: "new" }],
+    badges: [
+      { text: "AI MATCH 85%", kind: "ai-match" },
+      { text: "НОВИНКА", kind: "new" },
+    ],
     title: "Élan Studio",
     type: "Студія краси",
     rating: 4.9,
@@ -948,7 +1290,6 @@ const recommendations: CardData[] = [
     mastersCount: "4 майстри",
     why: "Високий рейтинг і сильна спеціалізація на beauty-послугах, які ви переглядали",
   },
-
 ];
 
 const soloMastersRecommendations: CardData[] = [
@@ -1049,7 +1390,6 @@ const soloMastersRecommendations: CardData[] = [
     variant: "solo",
     why: "Високий рейтинг, великий досвід і сильний збіг із вашими фільтрами",
   },
-
 ];
 
 const partners: PartnerOffer[] = [
@@ -1333,7 +1673,6 @@ const fresh: CardData[] = [
   },
 ];
 
-
 function RecommendationCarousel({
   cards,
   t,
@@ -1345,7 +1684,12 @@ function RecommendationCarousel({
   cards: CardData[];
   t: Translations;
   variant: "salons" | "masters" | "nearby" | "worth-trying" | "fresh";
-  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
+  onLocationClick?: (
+    name: string,
+    district: string,
+    distance: string,
+    coordinates?: [number, number],
+  ) => void;
   onBookClick?: (data: CardData) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
@@ -1358,10 +1702,7 @@ function RecommendationCarousel({
     const track = trackRef.current;
     if (!track) return;
 
-    const maxScrollLeft = Math.max(
-      0,
-      track.scrollWidth - track.clientWidth
-    );
+    const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
 
     setCanScrollLeft(track.scrollLeft > 5);
     setCanScrollRight(track.scrollLeft < maxScrollLeft - 5);
@@ -1398,9 +1739,7 @@ function RecommendationCarousel({
 
     const card = track.querySelector<HTMLElement>(".card");
 
-    const amount = card
-      ? card.offsetWidth + 14
-      : track.clientWidth * 0.25;
+    const amount = card ? card.offsetWidth + 14 : track.clientWidth * 0.25;
 
     track.scrollBy({
       left: amount * direction,
@@ -1412,23 +1751,23 @@ function RecommendationCarousel({
     <div
       className={`recommendation-carousel recommendation-carousel-${variant}`}
     >
-      <div
-        className="carousel-track"
-        ref={trackRef}
-        onScroll={updateArrows}
-      >
-        {cards.length > 0 ? cards.map((c, i) => (
-          <Card
-            key={c.title + i}
-            data={c}
-            t={t}
-            hideTags
-            hideReason
-            onLocationClick={onLocationClick}
-            onBookClick={onBookClick}
-            onSalonDetailsClick={onSalonDetailsClick}
-          />
-        )) : <p className="empty-results">{t.noResults}</p>}
+      <div className="carousel-track" ref={trackRef} onScroll={updateArrows}>
+        {cards.length > 0 ? (
+          cards.map((c, i) => (
+            <Card
+              key={c.title + i}
+              data={c}
+              t={t}
+              hideTags
+              hideReason
+              onLocationClick={onLocationClick}
+              onBookClick={onBookClick}
+              onSalonDetailsClick={onSalonDetailsClick}
+            />
+          ))
+        ) : (
+          <p className="empty-results">{t.noResults}</p>
+        )}
       </div>
 
       {canScrollLeft && (
@@ -1456,7 +1795,6 @@ function RecommendationCarousel({
   );
 }
 
-
 function PartnerOffersCarousel({
   offers,
   lang,
@@ -1464,7 +1802,12 @@ function PartnerOffersCarousel({
 }: {
   offers: PartnerOffer[];
   lang: Lang;
-  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
+  onLocationClick?: (
+    name: string,
+    district: string,
+    distance: string,
+    coordinates?: [number, number],
+  ) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const ua = lang === "ua";
@@ -1476,10 +1819,7 @@ function PartnerOffersCarousel({
     const track = trackRef.current;
     if (!track) return;
 
-    const maxScrollLeft = Math.max(
-      0,
-      track.scrollWidth - track.clientWidth
-    );
+    const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
 
     setCanScrollLeft(track.scrollLeft > 5);
     setCanScrollRight(track.scrollLeft < maxScrollLeft - 5);
@@ -1509,9 +1849,7 @@ function PartnerOffersCarousel({
 
     const card = track.querySelector<HTMLElement>(".partner-offer-card");
 
-    const amount = card
-      ? card.offsetWidth + 14
-      : track.clientWidth * 0.25;
+    const amount = card ? card.offsetWidth + 14 : track.clientWidth * 0.25;
 
     track.scrollBy({
       left: amount * direction,
@@ -1526,108 +1864,110 @@ function PartnerOffersCarousel({
         ref={trackRef}
         onScroll={updateArrows}
       >
-        {offers.length > 0 ? offers.map((offer, i) => (
-          <article
-            className="partner-offer-card"
-            key={`${offer.title}-${i}`}
-          >
-            <div
-              className="partner-offer-image"
-              style={offer.image ? { ["--partner-photo" as string]: `url(${offer.image})` } : undefined}
-            >
-              <span className="partner-discount">
-                {offer.discount}
-              </span>
+        {offers.length > 0 ? (
+          offers.map((offer, i) => (
+            <article className="partner-offer-card" key={`${offer.title}-${i}`}>
+              <div
+                className="partner-offer-image"
+                style={
+                  offer.image
+                    ? { ["--partner-photo" as string]: `url(${offer.image})` }
+                    : undefined
+                }
+              >
+                <span className="partner-discount">{offer.discount}</span>
 
-              <span className="partner-valid">
-                {offer.validUntil}
-              </span>
+                <span className="partner-valid">{offer.validUntil}</span>
 
-              {offer.gift && (
-                <span className="partner-gift">
-                  🎁 {offer.gift}
-                </span>
-              )}
-
-              <FavButton />
-            </div>
-
-            <div className="partner-offer-body">
-              <h3>{offer.title}</h3>
-
-              <p className="partner-name">
-                {offer.partner}
-              </p>
-
-              <div className="partner-card-meta">
-                <button
-                  type="button"
-                  className="card-location-link partner-location-link"
-                  onClick={() => onLocationClick?.(offer.partner, offer.district, offer.distance, offer.coordinates)}
-                  title={ua ? "Показати на карті" : "Show on map"}
-                >
-                  <span className="district-pin">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#a855f7"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                    {offer.district}
-                  </span>
-                  <span>· {offer.distance}</span>
-                </button>
-                {offer.openNow && (
-                  <span className="partner-availability">
-                    ● {ua ? "Є вікна сьогодні" : "Slots today"}
-                  </span>
+                {offer.gift && (
+                  <span className="partner-gift">🎁 {offer.gift}</span>
                 )}
+
+                <FavButton />
               </div>
 
-              <div className="partner-price-row">
-                <span className="partner-old-price">
-                  {offer.isDiscountOnly ? "" : `${offer.oldPrice} грн`}
-                </span>
+              <div className="partner-offer-body">
+                <h3>{offer.title}</h3>
 
-                <strong>
-                  {offer.isDiscountOnly ? (ua ? "Деталі в салоні" : "Details at salon") : `${offer.newPrice} грн`}
-                </strong>
+                <p className="partner-name">{offer.partner}</p>
+
+                <div className="partner-card-meta">
+                  <button
+                    type="button"
+                    className="card-location-link partner-location-link"
+                    onClick={() =>
+                      onLocationClick?.(
+                        offer.partner,
+                        offer.district,
+                        offer.distance,
+                        offer.coordinates,
+                      )
+                    }
+                    title={ua ? "Показати на карті" : "Show on map"}
+                  >
+                    <span className="district-pin">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#a855f7"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      {offer.district}
+                    </span>
+                    <span>· {offer.distance}</span>
+                  </button>
+                  {offer.openNow && (
+                    <span className="partner-availability">
+                      ● {ua ? "Є вікна сьогодні" : "Slots today"}
+                    </span>
+                  )}
+                </div>
+
+                <div className="partner-price-row">
+                  <span className="partner-old-price">
+                    {offer.isDiscountOnly ? "" : `${offer.oldPrice} грн`}
+                  </span>
+
+                  <strong>
+                    {offer.isDiscountOnly
+                      ? ua
+                        ? "Деталі в салоні"
+                        : "Details at salon"
+                      : `${offer.newPrice} грн`}
+                  </strong>
+                </div>
+
+                <button type="button" className="partner-book-btn">
+                  {ua ? "Записатися" : "Book now"}
+                </button>
+
+                <a href="#" className="partner-details-link">
+                  {ua ? "Детальніше" : "Details"} →
+                </a>
               </div>
-
-              <button
-                type="button"
-                className="partner-book-btn"
-              >
-                {ua ? "Записатися" : "Book now"}
-              </button>
-
-              <a
-                href="#"
-                className="partner-details-link"
-              >
-                {ua ? "Детальніше" : "Details"} →
-              </a>
-            </div>
-          </article>
-        )) : <p className="empty-results">{ua ? "За цими параметрами акцій не знайдено" : "No offers match these filters"}</p>}
+            </article>
+          ))
+        ) : (
+          <p className="empty-results">
+            {ua
+              ? "За цими параметрами акцій не знайдено"
+              : "No offers match these filters"}
+          </p>
+        )}
       </div>
 
       {canScrollLeft && (
         <button
           className="partner-carousel-arrow partner-carousel-prev"
           type="button"
-          aria-label={
-            ua
-              ? "Попередні пропозиції"
-              : "Previous offers"
-          }
+          aria-label={ua ? "Попередні пропозиції" : "Previous offers"}
           onClick={() => scroll(-1)}
         >
           ‹
@@ -1638,11 +1978,7 @@ function PartnerOffersCarousel({
         <button
           className="partner-carousel-arrow partner-carousel-next"
           type="button"
-          aria-label={
-            ua
-              ? "Наступні пропозиції"
-              : "Next offers"
-          }
+          aria-label={ua ? "Наступні пропозиції" : "Next offers"}
           onClick={() => scroll(1)}
         >
           ›
@@ -1665,7 +2001,12 @@ function PartnerOffersSection({
   link: string;
   offers: PartnerOffer[];
   lang: Lang;
-  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
+  onLocationClick?: (
+    name: string,
+    district: string,
+    distance: string,
+    coordinates?: [number, number],
+  ) => void;
 }) {
   return (
     <section className="section partner-offers-section" id="promotions">
@@ -1694,12 +2035,16 @@ function PartnerOffersSection({
 
           <p className="section-sub">{subtitle}</p>
 
-           <a className="section-link partner-info-link" href="#partners-info">
+          <a className="section-link partner-info-link" href="#partners-info">
             {link}
           </a>
         </div>
       </div>
-      <PartnerOffersCarousel offers={offers} lang={lang} onLocationClick={onLocationClick} />
+      <PartnerOffersCarousel
+        offers={offers}
+        lang={lang}
+        onLocationClick={onLocationClick}
+      />
     </section>
   );
 }
@@ -1712,7 +2057,12 @@ function KyivTopSection({
 }: {
   cards: CardData[];
   lang: Lang;
-  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
+  onLocationClick?: (
+    name: string,
+    district: string,
+    distance: string,
+    coordinates?: [number, number],
+  ) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -1776,7 +2126,9 @@ function KyivTopSection({
             {ua ? "Найкращі в Києві" : "Best in Kyiv"}
           </h2>
           <p className="section-sub">
-            {ua ? "Салони та майстри з найвищими показниками" : "Top salons and masters by overall performance"}
+            {ua
+              ? "Салони та майстри з найвищими показниками"
+              : "Top salons and masters by overall performance"}
           </p>
         </div>
         <span className="results-badge kyiv-top-badge">
@@ -1790,39 +2142,75 @@ function KyivTopSection({
             <article className="kyiv-cover-card" key={`${card.title}-${i}`}>
               <div
                 className="kyiv-cover-photo"
-                style={card.image ? { ["--kyiv-cover-photo" as string]: `url(${card.image})` } : undefined}
+                style={
+                  card.image
+                    ? { ["--kyiv-cover-photo" as string]: `url(${card.image})` }
+                    : undefined
+                }
               >
                 <div className="kyiv-cover-shade" />
 
                 <div className="kyiv-cover-topline">
-                  <span className="kyiv-cover-kicker">BEAUTY AI · KYIV TOP</span>
+                  <span className="kyiv-cover-kicker">
+                    BEAUTY AI · KYIV TOP
+                  </span>
                   <FavButton />
                 </div>
 
                 <span className="kyiv-cover-rank">{i + 1}</span>
 
                 <div className="kyiv-cover-copy">
-                  <span className={`kyiv-cover-label kyiv-cover-label-${i % 4}`}>
-                    {card.badges[0]?.text ?? (ua ? "ВИБІР BEAUTY AI" : "BEAUTY AI PICK")}
+                  <span
+                    className={`kyiv-cover-label kyiv-cover-label-${i % 4}`}
+                  >
+                    {card.badges[0]?.text ??
+                      (ua ? "ВИБІР BEAUTY AI" : "BEAUTY AI PICK")}
                   </span>
 
-                  <h3 className={card.variant === "solo" ? "kyiv-cover-master-name" : ""}>
+                  <h3
+                    className={
+                      card.variant === "solo" ? "kyiv-cover-master-name" : ""
+                    }
+                  >
                     {card.title}
                   </h3>
                   <p className="kyiv-cover-type">{card.type}</p>
 
                   <div className="kyiv-cover-rating">
                     <span>★ {card.rating.toFixed(1)}</span>
-                    <span>{card.reviews} {ua ? "відгуків" : "reviews"}</span>
+                    <span>
+                      {card.reviews} {ua ? "відгуків" : "reviews"}
+                    </span>
                   </div>
 
                   <button
                     type="button"
                     className="kyiv-cover-location"
-                    onClick={() => onLocationClick?.(card.title, card.district, card.distance, card.coordinates)}
-                    aria-label={ua ? `Показати ${card.title} на карті` : `Show ${card.title} on map`}
+                    onClick={() =>
+                      onLocationClick?.(
+                        card.title,
+                        card.district,
+                        card.distance,
+                        card.coordinates,
+                      )
+                    }
+                    aria-label={
+                      ua
+                        ? `Показати ${card.title} на карті`
+                        : `Show ${card.title} on map`
+                    }
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
                       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
                       <circle cx="12" cy="10" r="3" />
                     </svg>
@@ -1830,7 +2218,9 @@ function KyivTopSection({
                   </button>
 
                   <div className="kyiv-cover-footer">
-                    <span className="kyiv-cover-price">{ua ? "від" : "from"} {card.priceFrom} грн</span>
+                    <span className="kyiv-cover-price">
+                      {ua ? "від" : "from"} {card.priceFrom} грн
+                    </span>
                     {!card.variant && card.id && onSalonDetailsClick ? (
                       <button
                         type="button"
@@ -1840,7 +2230,9 @@ function KyivTopSection({
                         {ua ? "Профіль" : "Profile"} →
                       </button>
                     ) : (
-                      <span className="kyiv-cover-view">{ua ? "Профіль" : "Profile"} →</span>
+                      <span className="kyiv-cover-view">
+                        {ua ? "Профіль" : "Profile"} →
+                      </span>
                     )}
                   </div>
                 </div>
@@ -1850,10 +2242,24 @@ function KyivTopSection({
         </div>
 
         {canScrollLeft && (
-          <button className="carousel-arrow carousel-arrow-prev kyiv-top-arrow" type="button" aria-label={ua ? "Попередні" : "Previous"} onClick={() => scroll(-1)}>‹</button>
+          <button
+            className="carousel-arrow carousel-arrow-prev kyiv-top-arrow"
+            type="button"
+            aria-label={ua ? "Попередні" : "Previous"}
+            onClick={() => scroll(-1)}
+          >
+            ‹
+          </button>
         )}
         {canScrollRight && (
-          <button className="carousel-arrow carousel-arrow-next kyiv-top-arrow" type="button" aria-label={ua ? "Наступні" : "Next"} onClick={() => scroll(1)}>›</button>
+          <button
+            className="carousel-arrow carousel-arrow-next kyiv-top-arrow"
+            type="button"
+            aria-label={ua ? "Наступні" : "Next"}
+            onClick={() => scroll(1)}
+          >
+            ›
+          </button>
         )}
       </div>
     </section>
@@ -1882,7 +2288,12 @@ function PanelCarouselSection({
   variant: "nearby" | "worth-trying" | "fresh";
   resultsWord: string;
   id?: string;
-  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
+  onLocationClick?: (
+    name: string,
+    district: string,
+    distance: string,
+    coordinates?: [number, number],
+  ) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
   return (
@@ -1938,10 +2349,19 @@ function ReviewsSection({
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const detail = await apiRequest<ApiReview>(`/api/reviews/${reviewId}/`, {}, true, false);
+      const detail = await apiRequest<ApiReview>(
+        `/api/reviews/${reviewId}/`,
+        {},
+        true,
+        false,
+      );
       setSelectedReview(detail);
     } catch (requestError) {
-      setDetailError(requestError instanceof Error ? requestError.message : "Could not load review");
+      setDetailError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Could not load review",
+      );
     } finally {
       setDetailLoading(false);
     }
@@ -1957,7 +2377,9 @@ function ReviewsSection({
               {lang === "ua" ? "Відгуки клієнтів" : "Customer reviews"}
             </h2>
             <p className="section-sub">
-              {lang === "ua" ? "Реальні оцінки клієнтів Beauty AI" : "Real ratings from Beauty AI customers"}
+              {lang === "ua"
+                ? "Реальні оцінки клієнтів Beauty AI"
+                : "Real ratings from Beauty AI customers"}
             </p>
           </div>
           {!loading && !error && (
@@ -1983,7 +2405,9 @@ function ReviewsSection({
 
         {!loading && !error && reviews.length === 0 && (
           <div className="reviews-state">
-            {lang === "ua" ? "Поки що відгуків немає." : "There are no reviews yet."}
+            {lang === "ua"
+              ? "Поки що відгуків немає."
+              : "There are no reviews yet."}
           </div>
         )}
 
@@ -1995,10 +2419,17 @@ function ReviewsSection({
                 className="review-card"
                 key={review.id}
                 onClick={() => void openReview(review.id)}
-                aria-label={lang === "ua" ? `Відкрити відгук ${review.id}` : `Open review ${review.id}`}
+                aria-label={
+                  lang === "ua"
+                    ? `Відкрити відгук ${review.id}`
+                    : `Open review ${review.id}`
+                }
               >
                 <div className="review-card-topline">
-                  <span className="review-stars" aria-label={`${review.rating} / 5`}>
+                  <span
+                    className="review-stars"
+                    aria-label={`${review.rating} / 5`}
+                  >
                     {"★".repeat(Math.max(0, Math.min(5, review.rating)))}
                     <span className="review-stars-muted">
                       {"★".repeat(Math.max(0, 5 - Math.min(5, review.rating)))}
@@ -2009,10 +2440,13 @@ function ReviewsSection({
                   </time>
                 </div>
                 <p className="review-comment">
-                  {review.comment || (lang === "ua" ? "Без коментаря" : "No comment")}
+                  {review.comment ||
+                    (lang === "ua" ? "Без коментаря" : "No comment")}
                 </p>
                 <span className="review-card-meta">
-                  {lang === "ua" ? `Майстер #${review.master}` : `Master #${review.master}`}
+                  {lang === "ua"
+                    ? `Майстер #${review.master}`
+                    : `Master #${review.master}`}
                   <span aria-hidden="true">→</span>
                 </span>
               </button>
@@ -2023,35 +2457,78 @@ function ReviewsSection({
 
       {detailLoading && (
         <div className="review-modal-backdrop" role="presentation">
-          <div className="review-modal-window" role="dialog" aria-modal="true" aria-label="Review">
-            <div className="reviews-state">{lang === "ua" ? "Завантаження…" : "Loading…"}</div>
+          <div
+            className="review-modal-window"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Review"
+          >
+            <div className="reviews-state">
+              {lang === "ua" ? "Завантаження…" : "Loading…"}
+            </div>
           </div>
         </div>
       )}
 
       {detailError && !detailLoading && (
-        <div className="review-modal-backdrop" role="presentation" onMouseDown={() => setDetailError(null)}>
-          <div className="review-modal-window review-modal-error" role="alert" onMouseDown={(event) => event.stopPropagation()}>
-            <button type="button" className="review-modal-close" onClick={() => setDetailError(null)} aria-label="Close">
+        <div
+          className="review-modal-backdrop"
+          role="presentation"
+          onMouseDown={() => setDetailError(null)}
+        >
+          <div
+            className="review-modal-window review-modal-error"
+            role="alert"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="review-modal-close"
+              onClick={() => setDetailError(null)}
+              aria-label="Close"
+            >
               ×
             </button>
-            <p>{lang === "ua" ? "Не вдалося завантажити деталі відгуку." : "Could not load review details."}</p>
+            <p>
+              {lang === "ua"
+                ? "Не вдалося завантажити деталі відгуку."
+                : "Could not load review details."}
+            </p>
           </div>
         </div>
       )}
 
       {selectedReview && !detailLoading && (
-        <div className="review-modal-backdrop" role="presentation" onMouseDown={() => setSelectedReview(null)}>
-          <div className="review-modal-window" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
-            <button type="button" className="review-modal-close" onClick={() => setSelectedReview(null)} aria-label="Close">
+        <div
+          className="review-modal-backdrop"
+          role="presentation"
+          onMouseDown={() => setSelectedReview(null)}
+        >
+          <div
+            className="review-modal-window"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="review-modal-close"
+              onClick={() => setSelectedReview(null)}
+              aria-label="Close"
+            >
               ×
             </button>
             <span className="about-kicker">✦ BEAUTY AI</span>
             <div className="review-modal-rating">
-              <span className="review-stars" aria-label={`${selectedReview.rating} / 5`}>
+              <span
+                className="review-stars"
+                aria-label={`${selectedReview.rating} / 5`}
+              >
                 {"★".repeat(Math.max(0, Math.min(5, selectedReview.rating)))}
                 <span className="review-stars-muted">
-                  {"★".repeat(Math.max(0, 5 - Math.min(5, selectedReview.rating)))}
+                  {"★".repeat(
+                    Math.max(0, 5 - Math.min(5, selectedReview.rating)),
+                  )}
                 </span>
               </span>
               <time dateTime={selectedReview.created_at}>
@@ -2059,11 +2536,20 @@ function ReviewsSection({
               </time>
             </div>
             <p className="review-modal-comment">
-              {selectedReview.comment || (lang === "ua" ? "Без коментаря" : "No comment")}
+              {selectedReview.comment ||
+                (lang === "ua" ? "Без коментаря" : "No comment")}
             </p>
             <div className="review-modal-meta">
-              <span>{lang === "ua" ? `Запис #${selectedReview.appointment}` : `Appointment #${selectedReview.appointment}`}</span>
-              <span>{lang === "ua" ? `Майстер #${selectedReview.master}` : `Master #${selectedReview.master}`}</span>
+              <span>
+                {lang === "ua"
+                  ? `Запис #${selectedReview.appointment}`
+                  : `Appointment #${selectedReview.appointment}`}
+              </span>
+              <span>
+                {lang === "ua"
+                  ? `Майстер #${selectedReview.master}`
+                  : `Master #${selectedReview.master}`}
+              </span>
             </div>
           </div>
         </div>
@@ -2072,10 +2558,13 @@ function ReviewsSection({
   );
 }
 
-function parseBackendCoordinates(salon: ApiSalon): [number, number] | undefined {
+function parseBackendCoordinates(
+  salon: ApiSalon,
+): [number, number] | undefined {
   const latitude = Number(salon.latitude);
   const longitude = Number(salon.longitude);
-  if (Number.isFinite(latitude) && Number.isFinite(longitude)) return [latitude, longitude];
+  if (Number.isFinite(latitude) && Number.isFinite(longitude))
+    return [latitude, longitude];
 
   const coordinates = salon.location?.coordinates?.match(
     /POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i,
@@ -2087,16 +2576,27 @@ function parseBackendCoordinates(salon: ApiSalon): [number, number] | undefined 
   return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : undefined;
 }
 
-function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number): CardData {
+function apiSalonToCard(
+  salon: ApiSalon,
+  serviceNames: string[],
+  index: number,
+): CardData {
   const status = normalize(salon.available_status ?? "");
   const location = salon.location;
   const city = salon.city || location?.city_name || "";
   const district = salon.district || location?.region || city;
-  const address = salon.address || location?.address || city || "Адреса не вказана";
-  const statusIsOpen = ["open", "available", "відкрито", "available_now"].some((value) => status.includes(value));
-  const statusIsClosed = ["closed", "unavailable", "закрит", "недоступ"].some((value) => status.includes(value));
+  const address =
+    salon.address || location?.address || city || "Адреса не вказана";
+  const statusIsOpen = ["open", "available", "відкрито", "available_now"].some(
+    (value) => status.includes(value),
+  );
+  const statusIsClosed = ["closed", "unavailable", "закрит", "недоступ"].some(
+    (value) => status.includes(value),
+  );
   const todayWeekday = new Date().getDay() || 7;
-  const todaySchedule = salon.working_hours?.find((schedule) => schedule.weekday === todayWeekday);
+  const todaySchedule = salon.working_hours?.find(
+    (schedule) => schedule.weekday === todayWeekday,
+  );
   const scheduleIsOpen = Boolean(
     todaySchedule &&
     !todaySchedule.is_closed &&
@@ -2118,7 +2618,9 @@ function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number):
     openNow: isOpen,
     tags,
     priceFrom: "—",
-    mastersCount: salon.masters_count ? `${salon.masters_count} майстрів` : undefined,
+    mastersCount: salon.masters_count
+      ? `${salon.masters_count} майстрів`
+      : undefined,
     locationNote: address,
     coordinates: parseBackendCoordinates(salon),
   };
@@ -2150,7 +2652,13 @@ function SalonDetailsModal({
       })
       .catch((requestError: unknown) => {
         if (!cancelled) {
-          setError(requestError instanceof Error ? requestError.message : (ua ? "Не вдалося завантажити салон" : "Could not load salon"));
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : ua
+                ? "Не вдалося завантажити салон"
+                : "Could not load salon",
+          );
         }
       })
       .finally(() => {
@@ -2164,16 +2672,44 @@ function SalonDetailsModal({
 
   const location = salon?.location;
   const city = salon?.city || location?.city_name || "";
-  const address = salon?.address || location?.address || city || (ua ? "Адреса не вказана" : "Address unavailable");
+  const address =
+    salon?.address ||
+    location?.address ||
+    city ||
+    (ua ? "Адреса не вказана" : "Address unavailable");
   const district = salon?.district || location?.region || city;
   const status = normalize(salon?.available_status ?? "");
-  const isAvailable = ["open", "available", "відкрито", "available_now"].some((value) => status.includes(value));
+  const isAvailable = ["open", "available", "відкрито", "available_now"].some(
+    (value) => status.includes(value),
+  );
   const weekdays = ua
-    ? ["", "Понеділок", "Вівторок", "Середа", "Четвер", "П’ятниця", "Субота", "Неділя"]
-    : ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    ? [
+        "",
+        "Понеділок",
+        "Вівторок",
+        "Середа",
+        "Четвер",
+        "П’ятниця",
+        "Субота",
+        "Неділя",
+      ]
+    : [
+        "",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ];
 
   return (
-    <div className="salon-details-modal-backdrop" role="presentation" onMouseDown={onClose}>
+    <div
+      className="salon-details-modal-backdrop"
+      role="presentation"
+      onMouseDown={onClose}
+    >
       <div
         className="salon-details-modal-window"
         role="dialog"
@@ -2181,16 +2717,31 @@ function SalonDetailsModal({
         aria-labelledby="salon-details-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button type="button" className="salon-details-modal-close" onClick={onClose} aria-label={ua ? "Закрити" : "Close"}>
+        <button
+          type="button"
+          className="salon-details-modal-close"
+          onClick={onClose}
+          aria-label={ua ? "Закрити" : "Close"}
+        >
           ×
         </button>
 
-        {loading && <div className="salon-details-state">{ua ? "Завантаження даних салону…" : "Loading salon details…"}</div>}
+        {loading && (
+          <div className="salon-details-state">
+            {ua ? "Завантаження даних салону…" : "Loading salon details…"}
+          </div>
+        )}
 
         {!loading && error && (
           <div className="salon-details-state salon-details-state-error">
             <p>{error}</p>
-            <button type="button" className="salon-details-action" onClick={onClose}>{ua ? "Закрити" : "Close"}</button>
+            <button
+              type="button"
+              className="salon-details-action"
+              onClick={onClose}
+            >
+              {ua ? "Закрити" : "Close"}
+            </button>
           </div>
         )}
 
@@ -2198,7 +2749,13 @@ function SalonDetailsModal({
           <>
             <div
               className="salon-details-hero"
-              style={salon.logo ? { ["--salon-details-photo" as string]: `url(${salon.logo})` } : undefined}
+              style={
+                salon.logo
+                  ? {
+                      ["--salon-details-photo" as string]: `url(${salon.logo})`,
+                    }
+                  : undefined
+              }
             >
               <div className="salon-details-hero-shade" />
               <span className="salon-details-kicker">BEAUTY AI · SALON</span>
@@ -2207,47 +2764,86 @@ function SalonDetailsModal({
             <div className="salon-details-content">
               <div className="salon-details-title-row">
                 <div>
-                  <span className="about-kicker">✦ {ua ? "ПРО САЛОН" : "ABOUT THE SALON"}</span>
+                  <span className="about-kicker">
+                    ✦ {ua ? "ПРО САЛОН" : "ABOUT THE SALON"}
+                  </span>
                   <h2 id="salon-details-title">{salon.name}</h2>
                 </div>
-                <span className={`salon-details-status ${isAvailable ? "is-available" : ""}`}>
-                  {isAvailable ? (ua ? "Доступний" : "Available") : (ua ? "Статус уточнюється" : "Status unavailable")}
+                <span
+                  className={`salon-details-status ${isAvailable ? "is-available" : ""}`}
+                >
+                  {isAvailable
+                    ? ua
+                      ? "Доступний"
+                      : "Available"
+                    : ua
+                      ? "Статус уточнюється"
+                      : "Status unavailable"}
                 </span>
               </div>
 
               <div className="salon-details-rating">
-                <strong>★ {Number(salon.average_rating ?? 0).toFixed(1)}</strong>
-                <span>{salon.total_reviews ?? 0} {ua ? "відгуків" : "reviews"}</span>
+                <strong>
+                  ★ {Number(salon.average_rating ?? 0).toFixed(1)}
+                </strong>
+                <span>
+                  {salon.total_reviews ?? 0} {ua ? "відгуків" : "reviews"}
+                </span>
               </div>
 
               <div className="salon-details-info">
                 <span>⌖ {address}</span>
                 {district && district !== address && <span>• {district}</span>}
-                {salon.phone && <a href={`tel:${salon.phone}`}>☎ {salon.phone}</a>}
+                {salon.phone && (
+                  <a href={`tel:${salon.phone}`}>☎ {salon.phone}</a>
+                )}
               </div>
 
               <div className="salon-details-metrics">
-                <div><strong>{salon.masters_count ?? 0}</strong><span>{ua ? "майстрів" : "masters"}</span></div>
-                <div><strong>{salon.service_count ?? 0}</strong><span>{ua ? "послуг" : "services"}</span></div>
+                <div>
+                  <strong>{salon.masters_count ?? 0}</strong>
+                  <span>{ua ? "майстрів" : "masters"}</span>
+                </div>
+                <div>
+                  <strong>{salon.service_count ?? 0}</strong>
+                  <span>{ua ? "послуг" : "services"}</span>
+                </div>
               </div>
 
-              {salon.description && <p className="salon-details-description">{salon.description}</p>}
+              {salon.description && (
+                <p className="salon-details-description">{salon.description}</p>
+              )}
 
               <div className="salon-details-hours">
                 <h3>{ua ? "Графік роботи" : "Working hours"}</h3>
                 {salon.working_hours && salon.working_hours.length > 0 ? (
                   salon.working_hours.map((schedule) => (
-                    <div className="salon-details-hour-row" key={`${salon.id}-${schedule.weekday}`}>
-                      <span>{schedule.weekday ? weekdays[schedule.weekday] : (ua ? "День" : "Day")}</span>
+                    <div
+                      className="salon-details-hour-row"
+                      key={`${salon.id}-${schedule.weekday}`}
+                    >
+                      <span>
+                        {schedule.weekday
+                          ? weekdays[schedule.weekday]
+                          : ua
+                            ? "День"
+                            : "Day"}
+                      </span>
                       <span>
                         {schedule.is_closed
-                          ? (ua ? "Зачинено" : "Closed")
+                          ? ua
+                            ? "Зачинено"
+                            : "Closed"
                           : `${schedule.opening_time?.slice(0, 5) ?? "—"} – ${schedule.closing_time?.slice(0, 5) ?? "—"}`}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="salon-details-muted">{ua ? "Графік роботи ще не вказано" : "Working hours are not available yet"}</p>
+                  <p className="salon-details-muted">
+                    {ua
+                      ? "Графік роботи ще не вказано"
+                      : "Working hours are not available yet"}
+                  </p>
                 )}
               </div>
             </div>
@@ -2263,7 +2859,9 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
   const salonName = master.salons?.[0]?.name;
   const firstService = master.services?.[0];
   const firstSalon = master.salons?.[0];
-  const experience = master.years_of_experience ? `${master.years_of_experience} років досвіду` : undefined;
+  const experience = master.years_of_experience
+    ? `${master.years_of_experience} років досвіду`
+    : undefined;
   return {
     id: master.id,
     image: master.photo || null,
@@ -2296,13 +2894,16 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
 }
 
 function apiServiceMastersToCards(services: ApiService[]): CardData[] {
-  const masters = new Map<number, {
-    id: number;
-    first_name: string;
-    last_name: string;
-    services: Map<number, { id: number; name: string }>;
-    salons: Map<number, { id: number; name: string }>;
-  }>();
+  const masters = new Map<
+    number,
+    {
+      id: number;
+      first_name: string;
+      last_name: string;
+      services: Map<number, { id: number; name: string }>;
+      salons: Map<number, { id: number; name: string }>;
+    }
+  >();
 
   services.forEach((service) => {
     if (!Array.isArray(service.masters)) return;
@@ -2316,30 +2917,44 @@ function apiServiceMastersToCards(services: ApiService[]): CardData[] {
         salons: new Map(),
       };
       current.services.set(service.id, { id: service.id, name: service.name });
-      (service.salons ?? []).forEach((salon) => current.salons.set(salon.id, salon));
+      (service.salons ?? []).forEach((salon) =>
+        current.salons.set(salon.id, salon),
+      );
       masters.set(master.id, current);
     });
   });
 
   return Array.from(masters.values()).map((master) =>
-    apiMasterToCard({
-      id: master.id,
-      first_name: master.first_name,
-      last_name: master.last_name,
-      services: Array.from(master.services.values()),
-      salons: Array.from(master.salons.values()),
-    }, master.id),
+    apiMasterToCard(
+      {
+        id: master.id,
+        first_name: master.first_name,
+        last_name: master.last_name,
+        services: Array.from(master.services.values()),
+        salons: Array.from(master.salons.values()),
+      },
+      master.id,
+    ),
   );
 }
 
-function apiPromotionToOffer(promotion: ApiPromotion, salon?: ApiSalon): PartnerOffer {
+function apiPromotionToOffer(
+  promotion: ApiPromotion,
+  salon?: ApiSalon,
+): PartnerOffer {
   return {
     id: promotion.id,
     discount: `-${promotion.discount_percent}%`,
-    validUntil: promotion.end_date ? `до ${new Date(promotion.end_date).toLocaleDateString("uk-UA")}` : "",
+    validUntil: promotion.end_date
+      ? `до ${new Date(promotion.end_date).toLocaleDateString("uk-UA")}`
+      : "",
     title: promotion.name,
     partner: salon?.name ?? "",
-    district: salon?.district || salon?.location?.region || salon?.location?.city_name || "—",
+    district:
+      salon?.district ||
+      salon?.location?.region ||
+      salon?.location?.city_name ||
+      "—",
     distance: "—",
     oldPrice: "—",
     newPrice: "—",
@@ -2373,7 +2988,9 @@ function slotTime(value: string) {
 
 function bookingDateTime(date: string, time: string) {
   if (time.includes("T")) return new Date(time).toISOString();
-  return new Date(`${date}T${time.length === 5 ? `${time}:00` : time}`).toISOString();
+  return new Date(
+    `${date}T${time.length === 5 ? `${time}:00` : time}`,
+  ).toISOString();
 }
 
 function BookingModal({
@@ -2390,7 +3007,9 @@ function BookingModal({
   const ua = lang === "ua";
   const firstDate = localDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const [dateFrom, setDateFrom] = useState(firstDate);
-  const [slotsByDate, setSlotsByDate] = useState<Record<string, BookingSlot[]>>({});
+  const [slotsByDate, setSlotsByDate] = useState<Record<string, BookingSlot[]>>(
+    {},
+  );
   const [selectedDate, setSelectedDate] = useState(firstDate);
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2399,7 +3018,11 @@ function BookingModal({
 
   useEffect(() => {
     if (!card.booking) return;
-    const dateTo = localDateInput(new Date(new Date(`${dateFrom}T12:00:00`).getTime() + 6 * 24 * 60 * 60 * 1000));
+    const dateTo = localDateInput(
+      new Date(
+        new Date(`${dateFrom}T12:00:00`).getTime() + 6 * 24 * 60 * 60 * 1000,
+      ),
+    );
     setLoading(true);
     setError(null);
     setSelectedSlot(null);
@@ -2411,7 +3034,13 @@ function BookingModal({
         setSelectedDate(Object.keys(payload ?? {})[0] ?? dateFrom);
       })
       .catch((requestError) => {
-        setError(requestError instanceof Error ? requestError.message : (ua ? "Не вдалося завантажити вільні вікна." : "Could not load available slots."));
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : ua
+              ? "Не вдалося завантажити вільні вікна."
+              : "Could not load available slots.",
+        );
       })
       .finally(() => setLoading(false));
   }, [card.booking, dateFrom, ua]);
@@ -2433,19 +3062,46 @@ function BookingModal({
       });
       onCreated(appointment);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : (ua ? "Не вдалося створити запис." : "Could not create the booking."));
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : ua
+            ? "Не вдалося створити запис."
+            : "Could not create the booking.",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="booking-modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <div className="booking-modal-window" role="dialog" aria-modal="true" aria-labelledby="booking-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-        <button type="button" className="booking-modal-close" onClick={onClose} aria-label={ua ? "Закрити" : "Close"}>×</button>
+    <div
+      className="booking-modal-backdrop"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <div
+        className="booking-modal-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="booking-modal-close"
+          onClick={onClose}
+          aria-label={ua ? "Закрити" : "Close"}
+        >
+          ×
+        </button>
         <span className="about-kicker">✦ BEAUTY AI</span>
-        <h2 id="booking-modal-title">{ua ? "Записатися до майстра" : "Book an appointment"}</h2>
-        <p className="booking-modal-subtitle">{card.booking?.masterName ?? card.title}</p>
+        <h2 id="booking-modal-title">
+          {ua ? "Записатися до майстра" : "Book an appointment"}
+        </h2>
+        <p className="booking-modal-subtitle">
+          {card.booking?.masterName ?? card.title}
+        </p>
 
         {!card.booking ? (
           <div className="booking-state booking-state-error">
@@ -2460,33 +3116,80 @@ function BookingModal({
               <span>{card.booking.salonName}</span>
             </div>
             <label className="booking-date-field">
-              <span>{ua ? "Показати вільні дати від" : "Show availability from"}</span>
-              <input type="date" value={dateFrom} min={firstDate} onChange={(event) => setDateFrom(event.target.value)} />
+              <span>
+                {ua ? "Показати вільні дати від" : "Show availability from"}
+              </span>
+              <input
+                type="date"
+                value={dateFrom}
+                min={firstDate}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
             </label>
-            {loading && <div className="booking-state">{ua ? "Шукаємо вільні вікна…" : "Finding available slots…"}</div>}
-            {!loading && error && <div className="booking-state booking-state-error">{error}</div>}
+            {loading && (
+              <div className="booking-state">
+                {ua ? "Шукаємо вільні вікна…" : "Finding available slots…"}
+              </div>
+            )}
+            {!loading && error && (
+              <div className="booking-state booking-state-error">{error}</div>
+            )}
             {!loading && !error && dates.length === 0 && (
-              <div className="booking-state">{ua ? "На найближчі дні вільних вікон немає." : "There are no available slots for the next few days."}</div>
+              <div className="booking-state">
+                {ua
+                  ? "На найближчі дні вільних вікон немає."
+                  : "There are no available slots for the next few days."}
+              </div>
             )}
             {!loading && !error && dates.length > 0 && (
               <>
-                <div className="booking-date-tabs" role="tablist" aria-label={ua ? "Доступні дати" : "Available dates"}>
+                <div
+                  className="booking-date-tabs"
+                  role="tablist"
+                  aria-label={ua ? "Доступні дати" : "Available dates"}
+                >
                   {dates.map((date) => (
-                    <button key={date} type="button" className={date === selectedDate ? "active" : ""} onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}>
+                    <button
+                      key={date}
+                      type="button"
+                      className={date === selectedDate ? "active" : ""}
+                      onClick={() => {
+                        setSelectedDate(date);
+                        setSelectedSlot(null);
+                      }}
+                    >
                       <span>{displayBookingDate(date, lang)}</span>
-                      <small>{slotsByDate[date].length} {ua ? "вікон" : "slots"}</small>
+                      <small>
+                        {slotsByDate[date].length} {ua ? "вікон" : "slots"}
+                      </small>
                     </button>
                   ))}
                 </div>
                 <div className="booking-slot-grid">
                   {slots.map((slot) => (
-                    <button key={`${slot.start}-${slot.end}`} type="button" className={selectedSlot === slot ? "active" : ""} onClick={() => setSelectedSlot(slot)}>
+                    <button
+                      key={`${slot.start}-${slot.end}`}
+                      type="button"
+                      className={selectedSlot === slot ? "active" : ""}
+                      onClick={() => setSelectedSlot(slot)}
+                    >
                       {slotTime(slot.start)} – {slotTime(slot.end)}
                     </button>
                   ))}
                 </div>
-                <button className="cta-btn booking-submit-btn" type="button" disabled={!selectedSlot || saving} onClick={() => void submitBooking()}>
-                  {saving ? (ua ? "Зберігаємо…" : "Saving…") : (ua ? "Підтвердити запис" : "Confirm booking")}
+                <button
+                  className="cta-btn booking-submit-btn"
+                  type="button"
+                  disabled={!selectedSlot || saving}
+                  onClick={() => void submitBooking()}
+                >
+                  {saving
+                    ? ua
+                      ? "Зберігаємо…"
+                      : "Saving…"
+                    : ua
+                      ? "Підтвердити запис"
+                      : "Confirm booking"}
                 </button>
               </>
             )}
@@ -2515,12 +3218,20 @@ export default function App() {
   const [partnerChoiceOpen, setPartnerChoiceOpen] = useState(false);
   const [user, setUser] = useState<MockUser | null>(null);
   const [view, setView] = useState<AppView>("home");
-  const [authRestoring, setAuthRestoring] = useState(() => Boolean(getAccessToken()));
-  const [verificationNotice, setVerificationNotice] = useState<string | null>(null);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [authRestoring, setAuthRestoring] = useState(() =>
+    Boolean(getAccessToken()),
+  );
+  const [verificationNotice, setVerificationNotice] = useState<string | null>(
+    null,
+  );
+  const [verificationError, setVerificationError] = useState<string | null>(
+    null,
+  );
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [recommendationFiltersOpen, setRecommendationFiltersOpen] = useState(false);
-  const [selectedMapLocation, setSelectedMapLocation] = useState<SelectedMapLocation | null>(null);
+  const [recommendationFiltersOpen, setRecommendationFiltersOpen] =
+    useState(false);
+  const [selectedMapLocation, setSelectedMapLocation] =
+    useState<SelectedMapLocation | null>(null);
   const [selectedSalonId, setSelectedSalonId] = useState<number | null>(null);
   const [bookingCard, setBookingCard] = useState<CardData | null>(null);
   const [liveHomeData, setLiveHomeData] = useState<{
@@ -2593,7 +3304,11 @@ export default function App() {
       })
       .finally(() => {
         if (!cancelled) {
-          window.history.replaceState({}, document.title, window.location.pathname);
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
         }
       });
 
@@ -2609,32 +3324,85 @@ export default function App() {
       setReviewsLoading(true);
       setReviewsError(null);
 
-      const [salonsResult, servicesResult, mastersResult, promotionsResult, reviewsResult] = await Promise.allSettled([
-        apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>("/api/salons/?ordering=-rating&page=1", {}, true, false),
-        apiRequest<{ results?: ApiService[] } | ApiService[]>("/api/services/?page=1", {}, true, false),
-        user
-          ? apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>("/api/users/masters/?ordering=-rating&page=1")
-          : Promise.resolve<ApiMaster[]>([]),
-        apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>("/api/promotions/?active=true&page=1", {}, true, false),
-        apiRequest<{ results?: ApiReview[] } | ApiReview[]>("/api/reviews/?page=1", {}, true, false),
+      const [
+        salonsResult,
+        servicesResult,
+        mastersResult,
+        promotionsResult,
+        reviewsResult,
+      ] = await Promise.allSettled([
+        apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>(
+          "/api/salons/?ordering=-rating&page=1",
+          {},
+          true,
+          false,
+        ),
+        apiRequest<{ results?: ApiService[] } | ApiService[]>(
+          "/api/services/?page=1",
+          {},
+          true,
+          false,
+        ),
+        apiRequest<{ results?: ApiMaster[] } | ApiMaster[]>(
+          "/api/users/masters/?ordering=-rating&page=1",
+          {},
+          true,
+          false,
+        ),
+        apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>(
+          "/api/promotions/?active=true&page=1",
+          {},
+          true,
+          false,
+        ),
+        apiRequest<{ results?: ApiReview[] } | ApiReview[]>(
+          "/api/reviews/?page=1",
+          {},
+          true,
+          false,
+        ),
       ]);
 
       if (cancelled) return;
 
-      const salons = salonsResult.status === "fulfilled" ? apiResults(salonsResult.value) : [];
-      const services = servicesResult.status === "fulfilled" ? apiResults(servicesResult.value) : [];
-      const masters = mastersResult.status === "fulfilled" ? apiResults(mastersResult.value) : [];
-      const promotions = promotionsResult.status === "fulfilled" ? apiResults(promotionsResult.value) : [];
-      const reviews = reviewsResult.status === "fulfilled" ? apiResults(reviewsResult.value) : [];
-      const serviceMasterCards = apiServiceMastersToCards(services as ApiService[]);
-      const masterCards = mastersResult.status === "fulfilled" && masters.length > 0
-        ? masters.map((master, index) => apiMasterToCard(master as ApiMaster, index))
-        : serviceMasterCards;
+      const salons =
+        salonsResult.status === "fulfilled"
+          ? apiResults(salonsResult.value)
+          : [];
+      const services =
+        servicesResult.status === "fulfilled"
+          ? apiResults(servicesResult.value)
+          : [];
+      const masters =
+        mastersResult.status === "fulfilled"
+          ? apiResults(mastersResult.value)
+          : [];
+      const promotions =
+        promotionsResult.status === "fulfilled"
+          ? apiResults(promotionsResult.value)
+          : [];
+      const reviews =
+        reviewsResult.status === "fulfilled"
+          ? apiResults(reviewsResult.value)
+          : [];
+      const serviceMasterCards = apiServiceMastersToCards(
+        services as ApiService[],
+      );
+      const masterCards =
+        mastersResult.status === "fulfilled" && masters.length > 0
+          ? masters.map((master, index) =>
+              apiMasterToCard(master as ApiMaster, index),
+            )
+          : serviceMasterCards;
       const serviceNamesBySalon = new Map<number, string[]>();
 
       setReviewsLoading(false);
       if (reviewsResult.status === "rejected") {
-        setReviewsError(reviewsResult.reason instanceof Error ? reviewsResult.reason.message : "Reviews request failed");
+        setReviewsError(
+          reviewsResult.reason instanceof Error
+            ? reviewsResult.reason.message
+            : "Reviews request failed",
+        );
       }
 
       (services as ApiService[]).forEach((service) => {
@@ -2646,17 +3414,32 @@ export default function App() {
       });
 
       const salonCards = salons.map((salon, index) =>
-        apiSalonToCard(salon as ApiSalon, serviceNamesBySalon.get((salon as ApiSalon).id) ?? [], index),
+        apiSalonToCard(
+          salon as ApiSalon,
+          serviceNamesBySalon.get((salon as ApiSalon).id) ?? [],
+          index,
+        ),
       );
-      const salonsById = new Map(salons.map((salon) => [(salon as ApiSalon).id, salon as ApiSalon]));
+      const salonsById = new Map(
+        salons.map((salon) => [(salon as ApiSalon).id, salon as ApiSalon]),
+      );
 
       setLiveHomeData({
         ...(salonsResult.status === "fulfilled" ? { salons: salonCards } : {}),
         masters: masterCards,
         ...(promotionsResult.status === "fulfilled"
-          ? { promotions: promotions.map((promotion) => apiPromotionToOffer(promotion as ApiPromotion, salonsById.get((promotion as ApiPromotion).salon))) }
+          ? {
+              promotions: promotions.map((promotion) =>
+                apiPromotionToOffer(
+                  promotion as ApiPromotion,
+                  salonsById.get((promotion as ApiPromotion).salon),
+                ),
+              ),
+            }
           : {}),
-        ...(reviewsResult.status === "fulfilled" ? { reviews: reviews as ApiReview[] } : {}),
+        ...(reviewsResult.status === "fulfilled"
+          ? { reviews: reviews as ApiReview[] }
+          : {}),
       });
     };
 
@@ -2668,7 +3451,11 @@ export default function App() {
 
   if (authRestoring) {
     return (
-      <div className="app auth-session-loading" role="status" aria-live="polite">
+      <div
+        className="app auth-session-loading"
+        role="status"
+        aria-live="polite"
+      >
         {lang === "ua" ? "Відновлюємо сесію…" : "Restoring your session…"}
       </div>
     );
@@ -2749,7 +3536,9 @@ export default function App() {
           user={user}
           lang={lang}
           onHome={() => setView("home")}
-          onRoleChange={(role) => setUser((prev) => prev ? { ...prev, role, avatar: null } : prev)}
+          onRoleChange={(role) =>
+            setUser((prev) => (prev ? { ...prev, role, avatar: null } : prev))
+          }
         />
       </div>
     );
@@ -2759,12 +3548,22 @@ export default function App() {
     <div className="app">
       <header className="header">
         <a className="logo" href="#" aria-label="Beauty AI — головна">
-          <img src={beautyAISparkles} alt="" className="logo-sparkles" aria-hidden="true" />
-          <span className="logo-wordmark"><span>Beauty</span> <strong>AI</strong></span>
+          <img
+            src={beautyAISparkles}
+            alt=""
+            className="logo-sparkles"
+            aria-hidden="true"
+          />
+          <span className="logo-wordmark">
+            <span>Beauty</span> <strong>AI</strong>
+          </span>
         </a>
         <nav className="nav">
           {t.nav.map((label, i) => (
-            <a key={label} href={["#salons", "#masters",  "#promotions", "#about"][i]}>
+            <a
+              key={label}
+              href={["#salons", "#masters", "#promotions", "#about"][i]}
+            >
               {label}
             </a>
           ))}
@@ -2777,7 +3576,7 @@ export default function App() {
           >
             {lang === "ua" ? "UA" : "EN"} ˅
           </button>
-          
+
           {user ? (
             <div className="account-menu-wrap">
               <button
@@ -2786,12 +3585,21 @@ export default function App() {
                 aria-label={lang === "ua" ? "Меню акаунта" : "Account menu"}
                 aria-expanded={accountMenuOpen}
               >
-                {user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name} />
+                ) : (
+                  <span className="image-placeholder" aria-hidden="true">
+                    ✦
+                  </span>
+                )}
               </button>
 
               {accountMenuOpen && (
                 <>
-                  <div className="account-menu-backdrop" onMouseDown={() => setAccountMenuOpen(false)} />
+                  <div
+                    className="account-menu-backdrop"
+                    onMouseDown={() => setAccountMenuOpen(false)}
+                  />
                   <div className="account-menu" role="menu">
                     <button
                       type="button"
@@ -2803,7 +3611,12 @@ export default function App() {
                     >
                       {lang === "ua" ? "Мій кабінет" : "My account"}
                     </button>
-                    <button type="button" role="menuitem" className="account-menu-logout" onClick={handleLogout}>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="account-menu-logout"
+                      onClick={handleLogout}
+                    >
                       {lang === "ua" ? "Вийти" : "Log out"}
                     </button>
                   </div>
@@ -2827,23 +3640,22 @@ export default function App() {
       <section className="hero-full-width">
         <div className="hero-overlay-content">
           <div className="hero-content">
-
             <div className="hero-eyebrow">
               <span>BEAUTY AI</span> — {t.heroEyebrow}
             </div>
 
             <h1 className="hero-title">
               <span className="hero-title-line">{t.heroTitle1}</span>
-              <span className="hero-title-line hero-title-match">{t.heroTitle2}</span>
+              <span className="hero-title-line hero-title-match">
+                {t.heroTitle2}
+              </span>
               <span className="hero-title-line">
                 {lang === "ua" ? "ЗА ДОПОМОГОЮ" : "with the help of"}{" "}
                 <span className="hero-title-ai">AI</span>
               </span>
             </h1>
 
-            <p className="hero-subtitle">
-              {t.heroSubtitle}
-            </p>
+            <p className="hero-subtitle">{t.heroSubtitle}</p>
 
             <form
               className="search-bar"
@@ -2859,7 +3671,9 @@ export default function App() {
                 placeholder={t.searchPlaceholder}
                 aria-label={t.searchPlaceholder}
               />
-              <button className="search-btn" type="submit">{t.searchBtn}</button>
+              <button className="search-btn" type="submit">
+                {t.searchBtn}
+              </button>
             </form>
           </div>
 
@@ -2873,9 +3687,10 @@ export default function App() {
         </div>
       </section>
 
-      
       <section className="section ai-recommendations" id="salons">
-        <div className={`recommendations-topline ${recommendationFiltersOpen ? "filters-open" : ""}`}>
+        <div
+          className={`recommendations-topline ${recommendationFiltersOpen ? "filters-open" : ""}`}
+        >
           <div className="recommendations-heading">
             <h2 className="section-title">
               <span className="accent">
@@ -2887,13 +3702,21 @@ export default function App() {
                 />
               </span>
               {lang === "ua" ? (
-                <>Рекомендації Beauty <span className="recommendations-ai">AI</span></>
+                <>
+                  Рекомендації Beauty{" "}
+                  <span className="recommendations-ai">AI</span>
+                </>
               ) : (
-                <>Beauty <span className="recommendations-ai">AI</span> Recommendations</>
+                <>
+                  Beauty <span className="recommendations-ai">AI</span>{" "}
+                  Recommendations
+                </>
               )}
             </h2>
             <p className="section-sub">
-              {lang === "ua" ? "Підібрано відповідно до вашого запиту" : "Selected for your request"}
+              {lang === "ua"
+                ? "Підібрано відповідно до вашого запиту"
+                : "Selected for your request"}
             </p>
           </div>
 
@@ -2904,25 +3727,31 @@ export default function App() {
               aria-expanded={recommendationFiltersOpen}
               onClick={() => setRecommendationFiltersOpen((open) => !open)}
             >
-              <span className="recommendations-filter-icon" aria-hidden="true">☷</span>
+              <span className="recommendations-filter-icon" aria-hidden="true">
+                ☷
+              </span>
               {lang === "ua" ? "Фільтри" : "Filters"}
-              <span className="recommendations-filter-chevron" aria-hidden="true">⌄</span>
+              <span
+                className="recommendations-filter-chevron"
+                aria-hidden="true"
+              >
+                ⌄
+              </span>
             </button>
-
           </div>
 
           {recommendationFiltersOpen && (
             <div className="recommendations-filter-panel">
-               <FilterBar
-                 lang={lang}
-                 value={filters}
-                 onFilterChange={setFilters}
-                 onReset={() => {
-                   setActiveCategory("all");
-                   setSearchInput("");
-                   setSearchQuery("");
-                 }}
-               />
+              <FilterBar
+                lang={lang}
+                value={filters}
+                onFilterChange={setFilters}
+                onReset={() => {
+                  setActiveCategory("all");
+                  setSearchInput("");
+                  setSearchQuery("");
+                }}
+              />
             </div>
           )}
         </div>
@@ -2930,34 +3759,51 @@ export default function App() {
         <div className="recommendation-row recommendation-row-salons">
           <div className="recommendation-intro">
             <div className="recommendation-intro-head">
-              <h2><span className="row-symbol">✦</span>{t.sections.recommendations.title}</h2>
+              <h2>
+                <span className="row-symbol">✦</span>
+                {t.sections.recommendations.title}
+              </h2>
               <span className="results-count">
-                 {filteredRecommendations.length} {lang === "ua" ? "варіантів знайдено" : "options found"}
+                {filteredRecommendations.length}{" "}
+                {lang === "ua" ? "варіантів знайдено" : "options found"}
               </span>
             </div>
             <p>{t.sections.recommendations.subtitle}</p>
           </div>
-           <RecommendationCarousel
-             cards={filteredRecommendations}
-             t={t}
-             variant="salons"
-             onLocationClick={handleLocationClick}
-             onBookClick={handleBookClick}
-             onSalonDetailsClick={handleSalonDetailsClick}
-           />
+          <RecommendationCarousel
+            cards={filteredRecommendations}
+            t={t}
+            variant="salons"
+            onLocationClick={handleLocationClick}
+            onBookClick={handleBookClick}
+            onSalonDetailsClick={handleSalonDetailsClick}
+          />
         </div>
 
-        <div className="recommendation-row recommendation-row-masters" id="masters">
+        <div
+          className="recommendation-row recommendation-row-masters"
+          id="masters"
+        >
           <div className="recommendation-intro">
             <div className="recommendation-intro-head">
-              <h2><span className="row-symbol">✦</span>{t.sections.soloMasters.title}</h2>
+              <h2>
+                <span className="row-symbol">✦</span>
+                {t.sections.soloMasters.title}
+              </h2>
               <span className="results-count">
-                 {filteredMasters.length} {lang === "ua" ? "майстрів знайдено" : "masters found"}
+                {filteredMasters.length}{" "}
+                {lang === "ua" ? "майстрів знайдено" : "masters found"}
               </span>
             </div>
             <p>{t.sections.soloMasters.subtitle}</p>
           </div>
-           <RecommendationCarousel cards={filteredMasters} t={t} variant="masters" onLocationClick={handleLocationClick} onBookClick={handleBookClick} />
+          <RecommendationCarousel
+            cards={filteredMasters}
+            t={t}
+            variant="masters"
+            onLocationClick={handleLocationClick}
+            onBookClick={handleBookClick}
+          />
         </div>
       </section>
       <div className="section-divider" aria-hidden="true">
@@ -2967,53 +3813,79 @@ export default function App() {
         title={t.sections.partners.title}
         subtitle={t.sections.partners.subtitle}
         link={t.partnersLink}
-         offers={filteredPartners}
+        offers={filteredPartners}
         lang={lang}
         onLocationClick={handleLocationClick}
       />
 
-<KyivTopSection
-         cards={filteredNearby}
+      <KyivTopSection
+        cards={filteredNearby}
         lang={lang}
         onLocationClick={handleLocationClick}
-         onSalonDetailsClick={handleSalonDetailsClick}
+        onSalonDetailsClick={handleSalonDetailsClick}
       />
 
       <PanelCarouselSection
         title={t.sections.topRated.title}
         subtitle={t.sections.topRated.subtitle}
         icon={
-          <svg className="section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            className="section-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="m12 2.5 2.9 5.88 6.49.94-4.7 4.58 1.11 6.47L12 17.32l-5.8 3.05 1.11-6.47-4.7-4.58 6.49-.94L12 2.5Z" />
           </svg>
         }
-         cards={filteredTopRated}
+        cards={filteredTopRated}
         t={t}
         lang={lang}
         variant="worth-trying"
         resultsWord={lang === "ua" ? "варіантів знайдено" : "options found"}
         id="worth-trying"
         onLocationClick={handleLocationClick}
-         onSalonDetailsClick={handleSalonDetailsClick}
+        onSalonDetailsClick={handleSalonDetailsClick}
       />
 
       <PanelCarouselSection
         title={t.sections.fresh.title}
         subtitle={t.sections.fresh.subtitle}
         icon={
-          <svg className="section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            className="section-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
-            <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
+            <circle
+              cx="7.5"
+              cy="7.5"
+              r="1.5"
+              fill="currentColor"
+              stroke="none"
+            />
           </svg>
         }
-         cards={filteredFresh}
+        cards={filteredFresh}
         t={t}
         lang={lang}
         variant="fresh"
         resultsWord={lang === "ua" ? "новинок знайдено" : "new listings"}
         id="fresh"
         onLocationClick={handleLocationClick}
-         onSalonDetailsClick={handleSalonDetailsClick}
+        onSalonDetailsClick={handleSalonDetailsClick}
       />
 
       <ReviewsSection
@@ -3022,7 +3894,7 @@ export default function App() {
         error={reviewsError}
         lang={lang}
       />
-      
+
       <section className="about-section" id="about">
         <div className="about-main">
           <span className="about-kicker">✦ BEAUTY AI</span>
@@ -3033,17 +3905,12 @@ export default function App() {
         <div className="about-column">
           <h3>{t.about.contactsTitle}</h3>
 
-          <a href="mailto:support@beautyai.ua">
-            support@beautyai.ua
-          </a>
+          <a href="mailto:support@beautyai.ua">support@beautyai.ua</a>
 
-          <a href="#">
-            Telegram
-          </a>
+          <a href="#">Telegram</a>
         </div>
 
-        <div className="about-column about-partners"
-         id="partners-info">
+        <div className="about-column about-partners" id="partners-info">
           <h3>{t.about.partnersTitle}</h3>
           <p>{t.about.partnersText}</p>
 
@@ -3064,7 +3931,10 @@ export default function App() {
           role="presentation"
           onMouseDown={() => setPartnerChoiceOpen(false)}
         >
-          <div className="partner-choice-window" onMouseDown={(event) => event.stopPropagation()}>
+          <div
+            className="partner-choice-window"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <span className="partner-choice-kicker">✦ BEAUTY AI</span>
             <h3>{lang === "ua" ? "Хто ви?" : "Who are you?"}</h3>
             <p>
@@ -3077,28 +3947,44 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setAuthIntent({ mode: "register", role: "master", partnerKind: "solo" });
+                  setAuthIntent({
+                    mode: "register",
+                    role: "master",
+                    partnerKind: "solo",
+                  });
                   setPartnerChoiceOpen(false);
                   setAuthOpen(true);
                 }}
               >
-                <span className="partner-choice-title">{lang === "ua" ? "Соло-майстер" : "Solo master"}</span>
+                <span className="partner-choice-title">
+                  {lang === "ua" ? "Соло-майстер" : "Solo master"}
+                </span>
                 <span className="partner-choice-desc">
-                  {lang === "ua" ? "Працюю сам(а), без прив'язки до салону" : "I work independently, no salon"}
+                  {lang === "ua"
+                    ? "Працюю сам(а), без прив'язки до салону"
+                    : "I work independently, no salon"}
                 </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  setAuthIntent({ mode: "register", role: "master", partnerKind: "salon" });
+                  setAuthIntent({
+                    mode: "register",
+                    role: "master",
+                    partnerKind: "salon",
+                  });
                   setPartnerChoiceOpen(false);
                   setAuthOpen(true);
                 }}
               >
-                <span className="partner-choice-title">{lang === "ua" ? "Власник салону" : "Salon owner"}</span>
+                <span className="partner-choice-title">
+                  {lang === "ua" ? "Власник салону" : "Salon owner"}
+                </span>
                 <span className="partner-choice-desc">
-                  {lang === "ua" ? "Керую закладом з кількома майстрами" : "I run a business with multiple masters"}
+                  {lang === "ua"
+                    ? "Керую закладом з кількома майстрами"
+                    : "I run a business with multiple masters"}
                 </span>
               </button>
             </div>
@@ -3137,7 +4023,10 @@ export default function App() {
           role="presentation"
           onMouseDown={() => setSelectedMapLocation(null)}
         >
-          <div className="map-modal-window" onMouseDown={(event) => event.stopPropagation()}>
+          <div
+            className="map-modal-window"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <button
               type="button"
               className="map-modal-close"
