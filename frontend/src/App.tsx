@@ -45,6 +45,7 @@ type CardData = {
   experience?: string;
   locationNote?: string;
   profileLinkLabel?: string;
+  coordinates?: [number, number];
   booking?: {
     master: number;
     salon: number;
@@ -184,6 +185,7 @@ type PartnerOffer = {
   newPrice: string;
   gift?: string;
   isDiscountOnly?: boolean;
+  coordinates?: [number, number];
 };
 
 
@@ -193,33 +195,6 @@ type SelectedMapLocation = {
   distance: string;
   lat: number;
   lng: number;
-};
-
-const LOCATION_COORDINATES: Record<string, [number, number]> = {
-  "Luna Beauty House": [50.4380, 30.5325],
-  "Nails Studio": [50.4412, 30.5401],
-  "Beauty Room": [50.4465, 30.5502],
-  "Atelier Beauty": [50.4438, 30.5268],
-  "Élan Studio": [50.4390, 30.5292],
-  "Wellness Studio": [50.4424, 30.5310],
-  "Brow Bar": [50.4450, 30.5360],
-  "Оксана Мельник": [50.4392, 30.5330],
-  "Дмитро Кравець": [50.4418, 30.5368],
-  "Ірина Бондар": [50.4434, 30.5308],
-  "Марина Кузьменко": [50.4447, 30.5287],
-  "Софія Левченко": [50.4369, 30.5385],
-  "Андрій Савчук": [50.4470, 30.5338],
-  "Beauty Point": [50.4450, 30.5350],
-  "Pink Nail Bar": [50.4404, 30.5306],
-  "Metro Beauty": [50.4428, 30.5440],
-};
-
-const DISTRICT_FALLBACKS: Record<string, [number, number]> = {
-  "Печерський р-н": [50.4388, 30.5350],
-  "Печерськ": [50.4378, 30.5358],
-  "Липки": [50.4430, 30.5298],
-  "Центр": [50.4472, 30.5228],
-  "Золоті ворота": [50.4483, 30.5135],
 };
 
 type Lang = "ua" | "en";
@@ -758,7 +733,7 @@ function Card({
   t: Translations;
   hideTags?: boolean;
   hideReason?: boolean;
-  onLocationClick?: (name: string, district: string, distance: string) => void;
+  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
   onBookClick?: (data: CardData) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
@@ -797,7 +772,7 @@ function Card({
           <button
             type="button"
             className="card-location-link"
-            onClick={() => onLocationClick?.(data.title, data.district, data.distance)}
+            onClick={() => onLocationClick?.(data.title, data.district, data.distance, data.coordinates)}
             title="Показати на карті"
           >
             <span className="district-pin">
@@ -1370,7 +1345,7 @@ function RecommendationCarousel({
   cards: CardData[];
   t: Translations;
   variant: "salons" | "masters" | "nearby" | "worth-trying" | "fresh";
-  onLocationClick?: (name: string, district: string, distance: string) => void;
+  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
   onBookClick?: (data: CardData) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
@@ -1489,7 +1464,7 @@ function PartnerOffersCarousel({
 }: {
   offers: PartnerOffer[];
   lang: Lang;
-  onLocationClick?: (name: string, district: string, distance: string) => void;
+  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const ua = lang === "ua";
@@ -1588,7 +1563,7 @@ function PartnerOffersCarousel({
                 <button
                   type="button"
                   className="card-location-link partner-location-link"
-                  onClick={() => onLocationClick?.(offer.partner, offer.district, offer.distance)}
+                  onClick={() => onLocationClick?.(offer.partner, offer.district, offer.distance, offer.coordinates)}
                   title={ua ? "Показати на карті" : "Show on map"}
                 >
                   <span className="district-pin">
@@ -1690,7 +1665,7 @@ function PartnerOffersSection({
   link: string;
   offers: PartnerOffer[];
   lang: Lang;
-  onLocationClick?: (name: string, district: string, distance: string) => void;
+  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
 }) {
   return (
     <section className="section partner-offers-section" id="promotions">
@@ -1737,7 +1712,7 @@ function KyivTopSection({
 }: {
   cards: CardData[];
   lang: Lang;
-  onLocationClick?: (name: string, district: string, distance: string) => void;
+  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -1844,7 +1819,7 @@ function KyivTopSection({
                   <button
                     type="button"
                     className="kyiv-cover-location"
-                    onClick={() => onLocationClick?.(card.title, card.district, card.distance)}
+                    onClick={() => onLocationClick?.(card.title, card.district, card.distance, card.coordinates)}
                     aria-label={ua ? `Показати ${card.title} на карті` : `Show ${card.title} on map`}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1907,7 +1882,7 @@ function PanelCarouselSection({
   variant: "nearby" | "worth-trying" | "fresh";
   resultsWord: string;
   id?: string;
-  onLocationClick?: (name: string, district: string, distance: string) => void;
+  onLocationClick?: (name: string, district: string, distance: string, coordinates?: [number, number]) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
   return (
@@ -2097,6 +2072,21 @@ function ReviewsSection({
   );
 }
 
+function parseBackendCoordinates(salon: ApiSalon): [number, number] | undefined {
+  const latitude = Number(salon.latitude);
+  const longitude = Number(salon.longitude);
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) return [latitude, longitude];
+
+  const coordinates = salon.location?.coordinates?.match(
+    /POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i,
+  );
+  if (!coordinates) return undefined;
+
+  const lng = Number(coordinates[1]);
+  const lat = Number(coordinates[2]);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : undefined;
+}
+
 function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number): CardData {
   const status = normalize(salon.available_status ?? "");
   const location = salon.location;
@@ -2114,22 +2104,23 @@ function apiSalonToCard(salon: ApiSalon, serviceNames: string[], index: number):
     todaySchedule.closing_time,
   );
   const isOpen = statusIsOpen || (!statusIsClosed && scheduleIsOpen);
-  const tags = serviceNames.length > 0 ? serviceNames.slice(0, 4) : [city || "Beauty services"];
+  const tags = serviceNames.slice(0, 4);
   return {
     id: salon.id,
     image: salon.logo || null,
-    badges: [{ text: "LIVE API", kind: "ai-match" }],
+    badges: [],
     title: salon.name,
     type: "Салон краси",
     rating: Number(salon.average_rating ?? 0),
     reviews: Number(salon.total_reviews ?? 0),
-    district: district || "Kyiv",
+    district: district || "—",
     distance: "—",
     openNow: isOpen,
     tags,
     priceFrom: "—",
     mastersCount: salon.masters_count ? `${salon.masters_count} майстрів` : undefined,
     locationNote: address,
+    coordinates: parseBackendCoordinates(salon),
   };
 }
 
@@ -2276,17 +2267,17 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
   return {
     id: master.id,
     image: master.photo || null,
-    badges: [{ text: "LIVE API", kind: "ai-match" }],
+    badges: [],
     title: `${master.first_name} ${master.last_name}`.trim(),
-    type: `Соло майстер${serviceNames[0] ? ` · ${serviceNames[0]}` : ""}`,
+    type: serviceNames[0] ? `Майстер · ${serviceNames[0]}` : "Майстер",
     rating: Number(master.average_rating ?? 0),
     reviews: Number(master.total_reviews ?? 0),
-    district: salonName || "Kyiv",
+    district: salonName || "—",
     distance: "—",
     tags: serviceNames,
     priceFrom: "—",
     experience,
-    locationNote: salonName || "Beauty AI",
+    locationNote: salonName || undefined,
     profileLinkLabel: "Профіль майстра",
     variant: "solo",
     ...(firstService && firstSalon
@@ -2304,20 +2295,57 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
   };
 }
 
-function apiPromotionToOffer(promotion: ApiPromotion, salonName: string): PartnerOffer {
+function apiServiceMastersToCards(services: ApiService[]): CardData[] {
+  const masters = new Map<number, {
+    id: number;
+    first_name: string;
+    last_name: string;
+    services: Map<number, { id: number; name: string }>;
+    salons: Map<number, { id: number; name: string }>;
+  }>();
+
+  services.forEach((service) => {
+    if (!Array.isArray(service.masters)) return;
+
+    service.masters.forEach((master) => {
+      const current = masters.get(master.id) ?? {
+        id: master.id,
+        first_name: master.first_name,
+        last_name: master.last_name,
+        services: new Map(),
+        salons: new Map(),
+      };
+      current.services.set(service.id, { id: service.id, name: service.name });
+      (service.salons ?? []).forEach((salon) => current.salons.set(salon.id, salon));
+      masters.set(master.id, current);
+    });
+  });
+
+  return Array.from(masters.values()).map((master) =>
+    apiMasterToCard({
+      id: master.id,
+      first_name: master.first_name,
+      last_name: master.last_name,
+      services: Array.from(master.services.values()),
+      salons: Array.from(master.salons.values()),
+    }, master.id),
+  );
+}
+
+function apiPromotionToOffer(promotion: ApiPromotion, salon?: ApiSalon): PartnerOffer {
   return {
     id: promotion.id,
     discount: `-${promotion.discount_percent}%`,
     validUntil: promotion.end_date ? `до ${new Date(promotion.end_date).toLocaleDateString("uk-UA")}` : "",
     title: promotion.name,
-    partner: salonName || `Salon #${promotion.salon}`,
-    district: "Kyiv",
+    partner: salon?.name ?? "",
+    district: salon?.district || salon?.location?.region || salon?.location?.city_name || "—",
     distance: "—",
-    openNow: true,
     oldPrice: "—",
     newPrice: "—",
     gift: promotion.description,
     isDiscountOnly: true,
+    coordinates: salon ? parseBackendCoordinates(salon) : undefined,
   };
 }
 
@@ -2598,6 +2626,9 @@ export default function App() {
       const masters = mastersResult.status === "fulfilled" ? apiResults(mastersResult.value) : [];
       const promotions = promotionsResult.status === "fulfilled" ? apiResults(promotionsResult.value) : [];
       const reviews = reviewsResult.status === "fulfilled" ? apiResults(reviewsResult.value) : [];
+      const masterCards = user && mastersResult.status === "fulfilled"
+        ? masters.map((master, index) => apiMasterToCard(master as ApiMaster, index))
+        : apiServiceMastersToCards(services as ApiService[]);
       const serviceNamesBySalon = new Map<number, string[]>();
 
       setReviewsLoading(false);
@@ -2616,15 +2647,13 @@ export default function App() {
       const salonCards = salons.map((salon, index) =>
         apiSalonToCard(salon as ApiSalon, serviceNamesBySalon.get((salon as ApiSalon).id) ?? [], index),
       );
-      const salonNames = new Map(salons.map((salon) => [(salon as ApiSalon).id, (salon as ApiSalon).name]));
+      const salonsById = new Map(salons.map((salon) => [(salon as ApiSalon).id, salon as ApiSalon]));
 
       setLiveHomeData({
         ...(salonsResult.status === "fulfilled" ? { salons: salonCards } : {}),
-        ...(mastersResult.status === "fulfilled"
-          ? { masters: masters.map((master, index) => apiMasterToCard(master as ApiMaster, index)) }
-          : {}),
+        masters: masterCards,
         ...(promotionsResult.status === "fulfilled"
-          ? { promotions: promotions.map((promotion) => apiPromotionToOffer(promotion as ApiPromotion, salonNames.get((promotion as ApiPromotion).salon) ?? "")) }
+          ? { promotions: promotions.map((promotion) => apiPromotionToOffer(promotion as ApiPromotion, salonsById.get((promotion as ApiPromotion).salon))) }
           : {}),
         ...(reviewsResult.status === "fulfilled" ? { reviews: reviews as ApiReview[] } : {}),
       });
@@ -2669,15 +2698,19 @@ export default function App() {
     matchesCommonFilters(card, filters, activeCategory, searchQuery),
   );
 
-  const handleLocationClick = (name: string, district: string, distance: string) => {
-    const coords = LOCATION_COORDINATES[name] ?? DISTRICT_FALLBACKS[district] ?? [50.4412, 30.5390];
-
+  const handleLocationClick = (
+    name: string,
+    district: string,
+    distance: string,
+    coordinates?: [number, number],
+  ) => {
+    if (!coordinates) return;
     setSelectedMapLocation({
       name,
       district,
       distance,
-      lat: coords[0],
-      lng: coords[1],
+      lat: coordinates[0],
+      lng: coordinates[1],
     });
   };
 
