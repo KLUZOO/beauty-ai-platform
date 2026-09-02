@@ -315,6 +315,43 @@ a {
   border-radius: 16px;
 }
 
+/* =========================
+   REVIEWS SECTION
+   ========================= */
+
+.reviews-section {
+  padding: 60px 0;
+  background: #fbfaff;
+}
+
+.reviews-section h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 40px 0;
+  text-align: center;
+  color: #292634;
+}
+
+.reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.review-card {
+  background: white;
+  border: 1px solid #E0E0E0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.review-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
 .ai-card {
   left: -24px;
   top: 48px;
