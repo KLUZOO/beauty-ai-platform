@@ -3268,6 +3268,25 @@ more-filters-text-btn {
   font: inherit;
 }
 
+.booking-select-field {
+  display: grid;
+  gap: 7px;
+  margin: 20px 0 14px;
+  color: #4f435f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.booking-select-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ded2ef;
+  border-radius: 11px;
+  background: #fff;
+  color: #241936;
+  font: inherit;
+}
+
 .booking-date-tabs {
   display: flex;
   gap: 8px;
