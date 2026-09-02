@@ -31,6 +31,16 @@ import {
   verifyEmail,
 } from "./api";
 
+type CardBooking = {
+  master: number;
+  salon: number;
+  service: number;
+  masterName: string;
+  salonName: string;
+  serviceName: string;
+  promoId?: number;
+};
+
 type CardData = {
   id?: number;
   image?: string | null;
@@ -52,14 +62,7 @@ type CardData = {
   locationNote?: string;
   profileLinkLabel?: string;
   coordinates?: [number, number];
-  booking?: {
-    master: number;
-    salon: number;
-    service: number;
-    masterName: string;
-    salonName: string;
-    serviceName: string;
-  };
+  booking?: CardBooking;
 };
 
 const CATEGORY_TERMS: Record<string, string[]> = {
@@ -288,6 +291,7 @@ type PartnerOffer = {
   gift?: string;
   isDiscountOnly?: boolean;
   coordinates?: [number, number];
+  booking?: CardBooking;
 };
 
 type SelectedMapLocation = {
@@ -1805,6 +1809,7 @@ function PartnerOffersCarousel({
   offers,
   lang,
   onLocationClick,
+  onBookClick,
 }: {
   offers: PartnerOffer[];
   lang: Lang;
@@ -1814,6 +1819,7 @@ function PartnerOffersCarousel({
     distance: string,
     coordinates?: [number, number],
   ) => void;
+  onBookClick?: (data: CardData) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const ua = lang === "ua";
@@ -1950,7 +1956,28 @@ function PartnerOffersCarousel({
                   </strong>
                 </div>
 
-                <button type="button" className="partner-book-btn">
+                <button
+                  type="button"
+                  className="partner-book-btn"
+                  disabled={!offer.booking || !onBookClick}
+                  onClick={() => {
+                    if (!offer.booking || !onBookClick) return;
+                    onBookClick({
+                      id: offer.id,
+                      image: offer.image,
+                      badges: [],
+                      title: offer.title,
+                      type: ua ? "Акція" : "Promotion",
+                      rating: 0,
+                      reviews: 0,
+                      district: offer.district,
+                      distance: offer.distance,
+                      tags: [],
+                      priceFrom: offer.newPrice,
+                      booking: offer.booking,
+                    });
+                  }}
+                >
                   {ua ? "Записатися" : "Book now"}
                 </button>
 
@@ -2001,6 +2028,7 @@ function PartnerOffersSection({
   offers,
   lang,
   onLocationClick,
+  onBookClick,
 }: {
   title: string;
   subtitle: string;
@@ -2013,6 +2041,7 @@ function PartnerOffersSection({
     distance: string,
     coordinates?: [number, number],
   ) => void;
+  onBookClick?: (data: CardData) => void;
 }) {
   return (
     <section className="section partner-offers-section" id="promotions">
@@ -2050,6 +2079,7 @@ function PartnerOffersSection({
         offers={offers}
         lang={lang}
         onLocationClick={onLocationClick}
+        onBookClick={onBookClick}
       />
     </section>
   );
@@ -2283,6 +2313,7 @@ function PanelCarouselSection({
   resultsWord,
   id,
   onLocationClick,
+  onBookClick,
   onSalonDetailsClick,
 }: {
   title: string;
@@ -2300,6 +2331,7 @@ function PanelCarouselSection({
     distance: string,
     coordinates?: [number, number],
   ) => void;
+  onBookClick?: (data: CardData) => void;
   onSalonDetailsClick?: (salonId: number) => void;
 }) {
   return (
@@ -2320,6 +2352,7 @@ function PanelCarouselSection({
         t={t}
         variant={variant}
         onLocationClick={onLocationClick}
+        onBookClick={onBookClick}
         onSalonDetailsClick={onSalonDetailsClick}
       />
     </section>
@@ -2586,6 +2619,7 @@ function apiSalonToCard(
   salon: ApiSalon,
   serviceNames: string[],
   index: number,
+  booking?: CardBooking,
 ): CardData {
   const status = normalize(salon.available_status ?? "");
   const location = salon.location;
@@ -2632,6 +2666,7 @@ function apiSalonToCard(
       : undefined,
     locationNote: address,
     coordinates: parseBackendCoordinates(salon),
+    booking,
   };
 }
 
@@ -2864,10 +2899,12 @@ function SalonDetailsModal({
 }
 
 function apiMasterToCard(master: ApiMaster, index: number): CardData {
-  const serviceNames = (master.services ?? []).map((service) => service.name);
-  const salonName = master.salons?.[0]?.name;
-  const firstService = master.services?.[0];
-  const firstSalon = master.salons?.[0];
+  const services = master.active_services ?? master.services ?? [];
+  const salons = master.assigned_salons ?? master.salons ?? [];
+  const serviceNames = services.map((service) => service.name);
+  const salonName = salons[0]?.name;
+  const firstService = services[0];
+  const firstSalon = salons[0];
   const experience = master.years_of_experience
     ? `${master.years_of_experience} років досвіду`
     : undefined;
@@ -2947,10 +2984,37 @@ function apiServiceMastersToCards(services: ApiService[]): CardData[] {
   );
 }
 
+function getSalonBooking(
+  salon: ApiSalon,
+  services: ApiService[],
+): CardBooking | undefined {
+  for (const service of services) {
+    if (!service.salons?.some((item) => item.id === salon.id)) continue;
+    if (!Array.isArray(service.masters) || service.masters.length === 0)
+      continue;
+
+    const master = service.masters[0];
+    return {
+      master: master.id,
+      salon: salon.id,
+      service: service.id,
+      masterName: `${master.first_name} ${master.last_name}`.trim(),
+      salonName: salon.name,
+      serviceName: service.name,
+    };
+  }
+
+  return undefined;
+}
+
 function apiPromotionToOffer(
   promotion: ApiPromotion,
   salon?: ApiSalon,
+  services: ApiService[] = [],
 ): PartnerOffer {
+  const salonBooking = salon
+    ? getSalonBooking(salon, services)
+    : undefined;
   return {
     id: promotion.id,
     discount: `-${promotion.discount_percent}%`,
@@ -2970,6 +3034,9 @@ function apiPromotionToOffer(
     gift: promotion.description,
     isDiscountOnly: true,
     coordinates: salon ? parseBackendCoordinates(salon) : undefined,
+    booking: salonBooking
+      ? { ...salonBooking, promoId: promotion.id }
+      : undefined,
   };
 }
 
@@ -3068,6 +3135,9 @@ function BookingModal({
         service: card.booking.service,
         start: bookingDateTime(selectedDate, selectedSlot.start),
         end: bookingDateTime(selectedDate, selectedSlot.end),
+        ...(card.booking.promoId
+          ? { promo_id: card.booking.promoId }
+          : {}),
       });
       onCreated(appointment);
     } catch (requestError) {
@@ -3400,6 +3470,7 @@ export default function App() {
           serviceNamesBySalon.set(salon.id, current);
         });
       });
+      const liveServices = services as ApiService[];
 
       const salonCards =
         salons.length > 0
@@ -3408,6 +3479,7 @@ export default function App() {
                 salon as ApiSalon,
                 serviceNamesBySalon.get((salon as ApiSalon).id) ?? [],
                 index,
+                getSalonBooking(salon as ApiSalon, liveServices),
               ),
             )
           : [];
@@ -3424,6 +3496,7 @@ export default function App() {
                 apiPromotionToOffer(
                   promotion as ApiPromotion,
                   salonsById.get((promotion as ApiPromotion).salon),
+                  liveServices,
                 ),
               ),
             }
@@ -3823,6 +3896,7 @@ export default function App() {
         offers={filteredPartners}
         lang={lang}
         onLocationClick={handleLocationClick}
+        onBookClick={handleBookClick}
       />
 
       <KyivTopSection
@@ -3857,6 +3931,7 @@ export default function App() {
         resultsWord={lang === "ua" ? "варіантів знайдено" : "options found"}
         id="worth-trying"
         onLocationClick={handleLocationClick}
+        onBookClick={handleBookClick}
         onSalonDetailsClick={handleSalonDetailsClick}
       />
 
@@ -3892,6 +3967,7 @@ export default function App() {
         resultsWord={lang === "ua" ? "новинок знайдено" : "new listings"}
         id="fresh"
         onLocationClick={handleLocationClick}
+        onBookClick={handleBookClick}
         onSalonDetailsClick={handleSalonDetailsClick}
       />
 

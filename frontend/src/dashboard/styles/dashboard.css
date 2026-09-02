@@ -1922,3 +1922,57 @@
   height: 70px;
   border-radius: 50%;
 }
+
+.master-profile-status-v2 {
+  margin: 0 20px 18px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: #f5efff;
+  color: #6d43a4;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.master-profile-status-v2.success {
+  background: #effbf4;
+  color: #227544;
+}
+
+.master-profile-status-v2.error {
+  background: #fff1f3;
+  color: #b32f52;
+}
+
+.master-profile-details-v2 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 20px 0;
+}
+
+.master-profile-details-v2 > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(113, 53, 232, 0.1);
+  border-radius: 14px;
+  background: #fcfaff;
+}
+
+.master-profile-details-v2 span {
+  color: #8a7c9f;
+  font-size: 12px;
+}
+
+.master-profile-details-v2 b {
+  color: #2a2038;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+@media (max-width: 760px) {
+  .master-profile-details-v2 {
+    grid-template-columns: 1fr;
+  }
+}
