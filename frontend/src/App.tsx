@@ -13,6 +13,7 @@ import {
   getAccessToken,
   getMe,
   login,
+  listMasters,
   register,
   createAppointment,
   getSalon,
@@ -210,7 +211,7 @@ function matchesCommonFilters(
   )
     return false;
   if (filters.venueType === "salon" && isSolo) return false;
-  if (filters.availability === "today" && !item.openNow && !isSolo)
+  if (filters.availability === "today" && item.openNow === false && !isSolo)
     return false;
 
   return true;
@@ -2604,6 +2605,9 @@ function apiSalonToCard(
     todaySchedule.closing_time,
   );
   const isOpen = statusIsOpen || (!statusIsClosed && scheduleIsOpen);
+  const hasAvailabilityData = Boolean(
+    statusIsOpen || statusIsClosed || todaySchedule,
+  );
   const tags = serviceNames.slice(0, 4);
   return {
     id: salon.id,
@@ -2615,7 +2619,7 @@ function apiSalonToCard(
     reviews: Number(salon.total_reviews ?? 0),
     district: district || "—",
     distance: "—",
-    openNow: isOpen,
+    openNow: hasAvailabilityData ? isOpen : undefined,
     tags,
     priceFrom: "—",
     mastersCount: salon.masters_count
@@ -3373,7 +3377,6 @@ export default function App() {
       const serviceMasterCards = apiServiceMastersToCards(
         services as ApiService[],
       );
-      const masterCards = serviceMasterCards;
       const serviceNamesBySalon = new Map<number, string[]>();
 
       setReviewsLoading(false);
@@ -3409,7 +3412,7 @@ export default function App() {
 
       setLiveHomeData({
         salons: salonCards,
-        masters: masterCards,
+        masters: serviceMasterCards,
         ...(promotionsResult.status === "fulfilled"
           ? {
               promotions: promotions.map((promotion) =>
@@ -3424,6 +3427,22 @@ export default function App() {
           ? { reviews: reviews as ApiReview[] }
           : {}),
       });
+
+      // Masters are loaded separately so a protected or slow masters endpoint
+      // can never delay or replace the salons section.
+      void listMasters({ page: 1, ordering: "-rating" })
+        .then((masters) => {
+          if (cancelled || masters.length === 0) return;
+          setLiveHomeData((current) => ({
+            ...current,
+            masters: masters.map((master, index) =>
+              apiMasterToCard(master, index),
+            ),
+          }));
+        })
+        .catch(() => {
+          // The public services response remains the fallback for masters.
+        });
     };
 
     void loadHomeData();
