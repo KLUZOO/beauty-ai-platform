@@ -63,6 +63,8 @@ type CardData = {
   profileLinkLabel?: string;
   coordinates?: [number, number];
   booking?: CardBooking;
+  bookingOptions?: CardBooking[];
+  bookingTarget?: "master" | "salon";
 };
 
 const CATEGORY_TERMS: Record<string, string[]> = {
@@ -292,6 +294,7 @@ type PartnerOffer = {
   isDiscountOnly?: boolean;
   coordinates?: [number, number];
   booking?: CardBooking;
+  bookingOptions?: CardBooking[];
 };
 
 type SelectedMapLocation = {
@@ -1975,6 +1978,8 @@ function PartnerOffersCarousel({
                       tags: [],
                       priceFrom: offer.newPrice,
                       booking: offer.booking,
+                      bookingOptions: offer.bookingOptions,
+                      bookingTarget: "salon",
                     });
                   }}
                 >
@@ -2620,6 +2625,7 @@ function apiSalonToCard(
   serviceNames: string[],
   index: number,
   booking?: CardBooking,
+  bookingOptions: CardBooking[] = booking ? [booking] : [],
 ): CardData {
   const status = normalize(salon.available_status ?? "");
   const location = salon.location;
@@ -2667,6 +2673,8 @@ function apiSalonToCard(
     locationNote: address,
     coordinates: parseBackendCoordinates(salon),
     booking,
+    bookingOptions,
+    bookingTarget: "salon",
   };
 }
 
@@ -2934,6 +2942,7 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
             salonName: firstSalon.name,
             serviceName: firstService.name,
           },
+          bookingTarget: "master" as const,
         }
       : {}),
   };
@@ -2984,27 +2993,37 @@ function apiServiceMastersToCards(services: ApiService[]): CardData[] {
   );
 }
 
-function getSalonBooking(
+function getSalonBookingOptions(
   salon: ApiSalon,
   services: ApiService[],
-): CardBooking | undefined {
+): CardBooking[] {
+  const options: CardBooking[] = [];
+
   for (const service of services) {
     if (!service.salons?.some((item) => item.id === salon.id)) continue;
     if (!Array.isArray(service.masters) || service.masters.length === 0)
       continue;
 
-    const master = service.masters[0];
-    return {
-      master: master.id,
-      salon: salon.id,
-      service: service.id,
-      masterName: `${master.first_name} ${master.last_name}`.trim(),
-      salonName: salon.name,
-      serviceName: service.name,
-    };
+    for (const master of service.masters) {
+      options.push({
+        master: master.id,
+        salon: salon.id,
+        service: service.id,
+        masterName: `${master.first_name} ${master.last_name}`.trim(),
+        salonName: salon.name,
+        serviceName: service.name,
+      });
+    }
   }
 
-  return undefined;
+  return options.filter(
+    (option, index) =>
+      options.findIndex(
+        (candidate) =>
+          candidate.master === option.master &&
+          candidate.service === option.service,
+      ) === index,
+  );
 }
 
 function apiPromotionToOffer(
@@ -3012,9 +3031,10 @@ function apiPromotionToOffer(
   salon?: ApiSalon,
   services: ApiService[] = [],
 ): PartnerOffer {
-  const salonBooking = salon
-    ? getSalonBooking(salon, services)
-    : undefined;
+  const bookingOptions = salon
+    ? getSalonBookingOptions(salon, services)
+    : [];
+  const salonBooking = bookingOptions[0];
   return {
     id: promotion.id,
     discount: `-${promotion.discount_percent}%`,
@@ -3037,6 +3057,10 @@ function apiPromotionToOffer(
     booking: salonBooking
       ? { ...salonBooking, promoId: promotion.id }
       : undefined,
+    bookingOptions: bookingOptions.map((option) => ({
+      ...option,
+      promoId: promotion.id,
+    })),
   };
 }
 
@@ -3082,6 +3106,15 @@ function BookingModal({
 }) {
   const ua = lang === "ua";
   const firstDate = localDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const bookingOptions =
+    card.bookingOptions?.length
+      ? card.bookingOptions
+      : card.booking
+        ? [card.booking]
+        : [];
+  const [selectedBookingIndex, setSelectedBookingIndex] = useState(0);
+  const selectedBooking =
+    bookingOptions[selectedBookingIndex] ?? bookingOptions[0];
   const [dateFrom, setDateFrom] = useState(firstDate);
   const [slotsByDate, setSlotsByDate] = useState<Record<string, BookingSlot[]>>(
     {},
@@ -3093,7 +3126,7 @@ function BookingModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!card.booking) return;
+    if (!selectedBooking) return;
     const dateTo = localDateInput(
       new Date(
         new Date(`${dateFrom}T12:00:00`).getTime() + 6 * 24 * 60 * 60 * 1000,
@@ -3102,8 +3135,9 @@ function BookingModal({
     setLoading(true);
     setError(null);
     setSelectedSlot(null);
+    setSlotsByDate({});
     void apiRequest<Record<string, BookingSlot[]>>(
-      `/api/appointments/available-slots/?salon=${card.booking.salon}&master=${card.booking.master}&service=${card.booking.service}&date_from=${dateFrom}&date_to=${dateTo}`,
+      `/api/appointments/available-slots/?salon=${selectedBooking.salon}&master=${selectedBooking.master}&service=${selectedBooking.service}&date_from=${dateFrom}&date_to=${dateTo}`,
     )
       .then((payload) => {
         setSlotsByDate(payload && typeof payload === "object" ? payload : {});
@@ -3119,24 +3153,24 @@ function BookingModal({
         );
       })
       .finally(() => setLoading(false));
-  }, [card.booking, dateFrom, ua]);
+  }, [selectedBooking, dateFrom, ua]);
 
   const dates = Object.keys(slotsByDate);
   const slots = slotsByDate[selectedDate] ?? [];
 
   const submitBooking = async () => {
-    if (!card.booking || !selectedSlot) return;
+    if (!selectedBooking || !selectedSlot) return;
     setSaving(true);
     setError(null);
     try {
       const appointment = await createAppointment({
-        master: card.booking.master,
-        salon: card.booking.salon,
-        service: card.booking.service,
+        master: selectedBooking.master,
+        salon: selectedBooking.salon,
+        service: selectedBooking.service,
         start: bookingDateTime(selectedDate, selectedSlot.start),
         end: bookingDateTime(selectedDate, selectedSlot.end),
-        ...(card.booking.promoId
-          ? { promo_id: card.booking.promoId }
+        ...(selectedBooking.promoId
+          ? { promo_id: selectedBooking.promoId }
           : {}),
       });
       onCreated(appointment);
@@ -3176,23 +3210,58 @@ function BookingModal({
         </button>
         <span className="about-kicker">✦ BEAUTY AI</span>
         <h2 id="booking-modal-title">
-          {ua ? "Записатися до майстра" : "Book an appointment"}
+          {card.bookingTarget === "salon"
+            ? ua
+              ? "Записатися до салону"
+              : "Book at the salon"
+            : ua
+              ? "Записатися до майстра"
+              : "Book an appointment"}
         </h2>
         <p className="booking-modal-subtitle">
-          {card.booking?.masterName ?? card.title}
+          {card.bookingTarget === "salon"
+            ? card.title
+            : selectedBooking?.masterName ?? card.title}
         </p>
 
-        {!card.booking ? (
+        {!selectedBooking ? (
           <div className="booking-state booking-state-error">
             {ua
-              ? "Для цього профілю поки немає підключених даних послуги та розкладу. Спробуйте майстра з позначкою LIVE API."
-              : "This profile does not have connected service and schedule data yet. Try a master marked LIVE API."}
+              ? card.bookingTarget === "salon"
+                ? "Для цього салону ще не підключені послуги та розклад."
+                : "Для цього профілю ще не підключені послуга та розклад."
+              : card.bookingTarget === "salon"
+                ? "This salon does not have connected service and schedule data yet."
+                : "This profile does not have connected service and schedule data yet."}
           </div>
         ) : (
           <>
+            {card.bookingTarget === "salon" && bookingOptions.length > 1 && (
+              <label className="booking-select-field">
+                <span>
+                  {ua ? "Оберіть послугу та майстра" : "Choose a service and master"}
+                </span>
+                <select
+                  value={selectedBookingIndex}
+                  onChange={(event) => {
+                    setSelectedBookingIndex(Number(event.target.value));
+                    setSelectedSlot(null);
+                  }}
+                >
+                  {bookingOptions.map((option, index) => (
+                    <option key={`${option.service}-${option.master}`} value={index}>
+                      {option.serviceName} — {option.masterName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div className="booking-summary">
-              <span>{card.booking.serviceName}</span>
-              <span>{card.booking.salonName}</span>
+              <span>{selectedBooking.serviceName}</span>
+              <span>{selectedBooking.salonName}</span>
+              {card.bookingTarget === "salon" && (
+                <span>{selectedBooking.masterName}</span>
+              )}
             </div>
             <label className="booking-date-field">
               <span>
@@ -3475,12 +3544,20 @@ export default function App() {
       const salonCards =
         salons.length > 0
           ? salons.map((salon, index) =>
-              apiSalonToCard(
-                salon as ApiSalon,
-                serviceNamesBySalon.get((salon as ApiSalon).id) ?? [],
+            (() => {
+              const salonData = salon as ApiSalon;
+              const bookingOptions = getSalonBookingOptions(
+                salonData,
+                liveServices,
+              );
+              return apiSalonToCard(
+                salonData,
+                serviceNamesBySalon.get(salonData.id) ?? [],
                 index,
-                getSalonBooking(salon as ApiSalon, liveServices),
-              ),
+                bookingOptions[0],
+                bookingOptions,
+              );
+            })(),
             )
           : [];
       const salonsById = new Map(
