@@ -17,6 +17,8 @@ import {
   register,
   createAppointment,
   getSalon,
+  listReviews,
+  createReview,
   type ApiMaster,
   type ApiPromotion,
   type ApiReview,
