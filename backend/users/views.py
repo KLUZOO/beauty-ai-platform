@@ -262,7 +262,6 @@ class ClientListView(
 )
 class MasterListView(generics.ListAPIView):
     serializer_class = MasterListSerializer
-    permission_classes = (IsAuthenticated,)
 
     filter_backends = (OrderingFilter,)
 
