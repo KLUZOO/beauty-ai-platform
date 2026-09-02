@@ -48,6 +48,7 @@ type CardData = {
   title: string;
   type: string;
   rating: number;
+  ratingKnown?: boolean;
   reviews: number;
   district: string;
   distance: string;
@@ -150,6 +151,7 @@ function matchesCommonFilters(
     | "title"
     | "type"
     | "rating"
+    | "ratingKnown"
     | "district"
     | "distance"
     | "priceFrom"
@@ -195,6 +197,7 @@ function matchesCommonFilters(
     return false;
   if (
     filters.rating !== "any" &&
+    item.ratingKnown !== false &&
     item.rating < Number(filters.rating.replace("from", "")) / 10
   )
     return false;
@@ -2661,6 +2664,7 @@ function apiSalonToCard(
     title: salon.name,
     type: "Салон краси",
     rating: Number(salon.average_rating ?? 0),
+    ratingKnown: salon.average_rating != null,
     reviews: Number(salon.total_reviews ?? 0),
     district: district || "—",
     distance: "—",
@@ -2923,6 +2927,7 @@ function apiMasterToCard(master: ApiMaster, index: number): CardData {
     title: `${master.first_name} ${master.last_name}`.trim(),
     type: serviceNames[0] ? `Майстер · ${serviceNames[0]}` : "Майстер",
     rating: Number(master.average_rating ?? 0),
+    ratingKnown: master.average_rating != null,
     reviews: Number(master.total_reviews ?? 0),
     district: salonName || "—",
     distance: "—",
