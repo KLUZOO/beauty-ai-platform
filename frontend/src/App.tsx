@@ -3359,6 +3359,12 @@ export default function App() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [conversationId, setConversationId] = useState<
+    string | number | null
+  >(null);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authIntent, setAuthIntent] = useState<{
     mode: "login" | "register";
@@ -3678,6 +3684,69 @@ export default function App() {
     setBookingCard(card);
   };
 
+  const handleAiSearch = async () => {
+    const message = searchInput.trim();
+    if (!message || aiLoading) return;
+
+    setSearchQuery(message);
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const response = await fetch("http://localhost:8001/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+          conversation_id: conversationId,
+        }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const detail =
+          payload &&
+          typeof payload === "object" &&
+          "detail" in payload &&
+          typeof payload.detail === "string"
+            ? payload.detail
+            : `Chat request failed (${response.status})`;
+        throw new Error(detail);
+      }
+
+      if (payload && typeof payload === "object") {
+        const data = payload as Record<string, unknown>;
+        if (
+          typeof data.conversation_id === "string" ||
+          typeof data.conversation_id === "number" ||
+          data.conversation_id === null
+        ) {
+          setConversationId(data.conversation_id);
+        }
+
+        const answer = [data.response, data.message, data.answer, data.content].find(
+          (value): value is string => typeof value === "string",
+        );
+        setAiResponse(answer ?? JSON.stringify(payload, null, 2));
+      } else {
+        setAiResponse(
+          typeof payload === "string" ? payload : "Отримано порожню відповідь.",
+        );
+      }
+    } catch (requestError) {
+      setAiError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Не вдалося отримати відповідь від AI.",
+      );
+      setAiResponse(null);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleAuthenticated = (nextUser: MockUser) => {
     setUser(nextUser);
     setAuthOpen(false);
@@ -3823,7 +3892,7 @@ export default function App() {
               className="search-bar"
               onSubmit={(event) => {
                 event.preventDefault();
-                setSearchQuery(searchInput);
+                void handleAiSearch();
               }}
             >
               <input
@@ -3833,10 +3902,34 @@ export default function App() {
                 placeholder={t.searchPlaceholder}
                 aria-label={t.searchPlaceholder}
               />
-              <button className="search-btn" type="submit">
-                {t.searchBtn}
+              <button
+                className="search-btn"
+                type="submit"
+                disabled={aiLoading || !searchInput.trim()}
+              >
+                {aiLoading
+                  ? lang === "ua"
+                    ? "Шукаємо…"
+                    : "Searching…"
+                  : t.searchBtn}
               </button>
             </form>
+
+            {(aiLoading || aiResponse || aiError) && (
+              <div
+                className={`ai-chat-result ${aiError ? "is-error" : ""}`}
+                role={aiError ? "alert" : "status"}
+                aria-live="polite"
+              >
+                {aiLoading && (
+                  <p>{lang === "ua" ? "AI готує відповідь…" : "AI is replying…"}</p>
+                )}
+                {!aiLoading && aiError && <p>{aiError}</p>}
+                {!aiLoading && !aiError && aiResponse && (
+                  <p className="ai-chat-result-text">{aiResponse}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="hero-categories">
