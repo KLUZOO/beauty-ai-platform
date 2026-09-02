@@ -1,10 +1,63 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import DashboardFrame, { type MasterSection } from "../DashboardFrame";
 import type { AuthRole, Lang, MockUser } from "../types";
+import { getMasterProfile, type ApiMaster } from "../../api";
 
 export default function MasterDashboard({ user, lang, onHome, onRoleChange }: { user: MockUser; lang: Lang; onHome: () => void; onRoleChange: (role: AuthRole) => void }) {
   const ua = lang === "ua";
   const [section, setSection] = useState<MasterSection>("home");
+  const [masterProfile, setMasterProfile] = useState<ApiMaster | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getMasterProfile()
+      .then((profile) => {
+        if (cancelled) return;
+        setMasterProfile(profile);
+        setProfileError(null);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setProfileError(
+          error instanceof Error
+            ? error.message
+            : ua
+              ? "Не вдалося завантажити профіль майстра."
+              : "Could not load the master profile.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setProfileLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ua]);
+
+  const profileName =
+    [masterProfile?.first_name, masterProfile?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || user.name;
+  const profileEmail = masterProfile?.email || user.email;
+  const profilePhone = masterProfile?.phone || "";
+  const profilePhoto = masterProfile?.photo || user.avatar;
+  const profileSalons =
+    masterProfile?.assigned_salons ?? masterProfile?.salons ?? [];
+  const profileServices =
+    masterProfile?.active_services ?? masterProfile?.services ?? [];
+  const profileRating = masterProfile?.average_rating ?? 4.9;
+  const profileReviews = masterProfile?.total_reviews ?? 124;
+  const displayUser = {
+    ...user,
+    name: profileName,
+    email: profileEmail,
+    avatar: profilePhoto,
+  };
 
   const schedule = [
     { time: "10:00", client: "Олена К.", service: "Манікюр", price: "650 ₴", status: "done" },
@@ -20,15 +73,15 @@ export default function MasterDashboard({ user, lang, onHome, onRoleChange }: { 
     { name: "Олена К.", date: "16 травня", text: "Все чудово, як завжди!", rating: "5.0" },
   ];
 
-  const title = section === "home" ? (ua ? `Вітаємо, ${user.name}! 👋` : `Welcome, ${user.name}! 👋`) : section === "profile" ? (ua ? "Профіль майстра" : "Master profile") : (ua ? "Фінанси" : "Finance");
+  const title = section === "home" ? (ua ? `Вітаємо, ${displayUser.name}! 👋` : `Welcome, ${displayUser.name}! 👋`) : section === "profile" ? (ua ? "Профіль майстра" : "Master profile") : (ua ? "Фінанси" : "Finance");
 
-  return <DashboardFrame user={user} lang={lang} onHome={onHome} onRoleChange={onRoleChange} title={title} variant="master" activeSection={section} onSectionChange={setSection}>
+  return <DashboardFrame user={displayUser} lang={lang} onHome={onHome} onRoleChange={onRoleChange} title={title} variant="master" activeSection={section} onSectionChange={setSection}>
     {section === "home" && <div className="master-home-v2">
       <div className="master-summary-v2">
         <article><span>Записи сьогодні</span><strong>6</strong><small>+2 до вчора</small><i>✂</i></article>
         <article><span>Клієнти за місяць</span><strong>18</strong><small>+12% за місяць</small><i>♙</i></article>
         <article><span>Заповненість</span><strong>98%</strong><small>Відмінний результат</small><i>◒</i></article>
-        <article><span>Рейтинг</span><strong>4.9 <em>★</em></strong><small>124 відгуки</small><i>☆</i></article>
+        <article><span>Рейтинг</span><strong>{profileRating} <em>★</em></strong><small>{profileReviews} відгуки</small><i>☆</i></article>
       </div>
 
       <div className="master-main-grid-v2">
@@ -59,9 +112,16 @@ export default function MasterDashboard({ user, lang, onHome, onRoleChange }: { 
 
     {section === "profile" && <section className="master-card-v2 master-profile-v2">
       <div className="master-card-head-v2"><div><h2>Особиста інформація</h2><p>Так вас бачать клієнти Beauty AI</p></div></div>
-      <div className="master-profile-top-v2">{user.avatar ? <img src={user.avatar} alt={user.name}/> : <span className="image-placeholder" aria-hidden="true">✦</span>}<div><b>{user.name}</b><span>Майстер • Beauty AI</span><button type="button">Змінити фото</button></div></div>
-      <div className="master-form-grid-v2"><label>Ім'я<input defaultValue={user.name}/></label><label>Email<input defaultValue={user.email}/></label><label>Телефон<input defaultValue="+380 67 123 45 67"/></label><label>Місто<input defaultValue="Київ"/></label><label className="wide">Про себе<textarea defaultValue="Майстер манікюру та brow-artist. Люблю натуральні форми, акуратне покриття та красиві деталі."/></label></div>
-      <button className="master-primary-v2" type="button">Зберегти зміни</button>
+      {profileLoading && <p className="master-profile-status-v2" role="status">{ua ? "Завантажуємо дані профілю…" : "Loading profile data…"}</p>}
+      {profileError && <p className="master-profile-status-v2 error" role="alert">{profileError}</p>}
+      {!profileLoading && !profileError && masterProfile && <p className="master-profile-status-v2 success" role="status">{ua ? "Профіль завантажено з Beauty AI API" : "Profile loaded from the Beauty AI API"}</p>}
+      <div className="master-profile-top-v2">{profilePhoto ? <img src={profilePhoto} alt={profileName}/> : <span className="image-placeholder" aria-hidden="true">✦</span>}<div><b>{profileName}</b><span>{masterProfile?.account_status || (ua ? "Майстер • Beauty AI" : "Master • Beauty AI")}</span><button type="button">Змінити фото</button></div></div>
+      <div className="master-form-grid-v2"><label>Ім'я<input value={profileName} readOnly/></label><label>Email<input value={profileEmail} readOnly/></label><label>Телефон<input value={profilePhone || (ua ? "Не вказано" : "Not provided")} readOnly/></label><label>Місто<input value="Київ" readOnly/></label><label className="wide">Про себе<textarea value={masterProfile?.bio || (ua ? "Інформація про себе ще не додана." : "No bio has been added yet.")} readOnly/></label></div>
+      <div className="master-profile-details-v2">
+        <div><span>{ua ? "Досвід" : "Experience"}</span><b>{masterProfile?.years_of_experience ? `${masterProfile.years_of_experience} ${ua ? "років" : "years"}` : "—"}</b></div>
+        <div><span>{ua ? "Салони" : "Salons"}</span><b>{profileSalons.length ? profileSalons.map((salon) => salon.name).join(", ") : "—"}</b></div>
+        <div><span>{ua ? "Активні послуги" : "Active services"}</span><b>{profileServices.length ? profileServices.map((service) => service.name).join(", ") : "—"}</b></div>
+      </div>
     </section>}
 
     {section === "finance" && <div className="master-finance-v2">

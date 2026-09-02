@@ -107,14 +107,3 @@ export default function ReviewsSection() {
     </div>
   );
 }
-                }}
-              >
-                Майстер #{review.master} →
-              </a>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

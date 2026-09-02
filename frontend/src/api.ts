@@ -93,12 +93,26 @@ export type ApiMaster = {
   id: number;
   first_name: string;
   last_name: string;
+  email?: string;
+  phone?: string;
+  bio?: string;
   photo?: string | null;
   average_rating?: number;
   total_reviews?: number;
   years_of_experience?: number;
   salons?: Array<{ id: number; name: string }>;
+  assigned_salons?: Array<{ id: number; name: string }>;
   services?: Array<{ id: number; name: string }>;
+  active_services?: Array<{ id: number; name: string }>;
+  account_status?: string;
+  registration_date_master?: string;
+  last_update_master?: string;
+  working_schedule?: Array<{
+    weekday?: number;
+    opening_time?: string | null;
+    closing_time?: string | null;
+    is_closed?: boolean;
+  }>;
 };
 
 export type ApiPromotion = {
@@ -358,6 +372,10 @@ export async function verifyEmail(id: string, token: string) {
 
 export async function getMe() {
   return apiRequest<ApiUserProfile>("/api/users/me/");
+}
+
+export async function getMasterProfile() {
+  return apiRequest<ApiMaster>("/api/users/masters/me/");
 }
 
 export async function getSalon(id: number) {
