@@ -414,6 +414,39 @@ body {
   box-shadow: 0 5px 14px rgba(36, 26, 61, 0.24);
 }
 
+.search-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.ai-chat-result {
+  width: 100%;
+  max-width: 590px;
+  margin-top: 14px;
+  padding: 14px 18px;
+  border: 1px solid rgba(109, 40, 217, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #40394c;
+  box-shadow: 0 8px 24px rgba(45, 34, 66, 0.08);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ai-chat-result p {
+  margin: 0;
+}
+
+.ai-chat-result-text {
+  white-space: pre-wrap;
+}
+
+.ai-chat-result.is-error {
+  border-color: rgba(184, 92, 104, 0.3);
+  background: #fff5f6;
+  color: #a54558;
+}
+
 .search-btn:hover {
   background: var(--indigo-700);
   box-shadow: 0 10px 24px rgba(36, 26, 61, 0.32);
