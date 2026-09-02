@@ -121,6 +121,17 @@ export type ApiReview = {
   created_at: string;
 };
 
+export type ApiMasterReviewDetail = {
+  id: number;
+  client_name: string;
+  client_profile_photo?: string | null;
+  rating: number;
+  comment?: string | null;
+  service_name: string;
+  appointment_date: string;
+  created_at: string;
+};
+
 export type ApiAppointment = {
   id: number;
   client?: number;
@@ -592,22 +603,31 @@ export async function getReview(id: number) {
   return apiRequest<ApiReview>(`/api/reviews/${id}/`);
 }
 
-export async function updateReview(id: number, payload: ReviewPayload) {
-  return apiRequest<ApiReview>(`/api/reviews/${id}/`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+export async function getReviewForCurrentMaster(id: number) {
+  return apiRequest<ApiMasterReviewDetail>(`/api/reviews/${id}/masters/me/`);
 }
 
-export async function patchReview(id: number, payload: Partial<ReviewPayload>) {
-  return apiRequest<ApiReview>(`/api/reviews/${id}/`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function deleteReview(id: number) {
-  return apiRequest<void>(`/api/reviews/${id}/`, { method: "DELETE" });
+export async function listMasterReviews(
+  filters: {
+    page?: number;
+    date_from?: string;
+    date_to?: string;
+    ordering?: string;
+    rating?: number;
+    service?: string;
+  } = {},
+) {
+  const params = new URLSearchParams({ page: String(filters.page ?? 1) });
+  if (filters.date_from) params.set("date_from", filters.date_from);
+  if (filters.date_to) params.set("date_to", filters.date_to);
+  if (filters.ordering) params.set("ordering", filters.ordering);
+  if (filters.rating !== undefined)
+    params.set("rating", String(filters.rating));
+  if (filters.service) params.set("service", filters.service);
+  const payload = await apiRequest<ApiCollection<ApiMasterReviewDetail>>(
+    `/api/reviews/masters/me/?${params.toString()}`,
+  );
+  return apiResults(payload);
 }
 
 export function clearTokens() {
