@@ -3,6 +3,7 @@ import "./App.css";
 import MapSection from "./MapSection";
 import CategoryFilters from "./CategoryFilters";
 import FilterBar from "./FilterBar";
+import ReviewsSection from "./ReviewsSection";
 import { DEFAULT_FILTERS, type FilterState } from "./filterTypes";
 import beautyAISparkles from "./assets/beauty-ai-sparkles.svg";
 import DashboardShell from "./dashboard/DashboardShell";
@@ -3813,6 +3814,10 @@ export default function App() {
           />
         </div>
       </section>
+      <div className="section-divider" aria-hidden="true">
+        <span>✦</span>
+      </div>
+      <ReviewsSection />
       <div className="section-divider" aria-hidden="true">
         <span>✦</span>
       </div>
