@@ -3816,15 +3816,6 @@ export default function App() {
       <div className="section-divider" aria-hidden="true">
         <span>✦</span>
       </div>
-      <ReviewsSection
-        reviews={liveHomeData.reviews || []}
-        loading={reviewsLoading}
-        error={reviewsError}
-        lang={lang}
-      />
-      <div className="section-divider" aria-hidden="true">
-        <span>✦</span>
-      </div>
       <PartnerOffersSection
         title={t.sections.partners.title}
         subtitle={t.sections.partners.subtitle}
