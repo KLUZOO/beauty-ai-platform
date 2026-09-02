@@ -568,6 +568,48 @@ export async function removeFavoriteMaster(masterId: number) {
   });
 }
 
+export type ReviewPayload = {
+  appointment: number;
+  rating: number;
+  comment?: string;
+};
+
+export async function listReviews(page = 1) {
+  const payload = await apiRequest<ApiCollection<ApiReview>>(
+    `/api/reviews/?page=${page}`,
+  );
+  return apiResults(payload);
+}
+
+export async function createReview(payload: ReviewPayload) {
+  return apiRequest<ApiReview>("/api/reviews/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getReview(id: number) {
+  return apiRequest<ApiReview>(`/api/reviews/${id}/`);
+}
+
+export async function updateReview(id: number, payload: ReviewPayload) {
+  return apiRequest<ApiReview>(`/api/reviews/${id}/`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchReview(id: number, payload: Partial<ReviewPayload>) {
+  return apiRequest<ApiReview>(`/api/reviews/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteReview(id: number) {
+  return apiRequest<void>(`/api/reviews/${id}/`, { method: "DELETE" });
+}
+
 export function clearTokens() {
   try {
     localStorage.removeItem(AUTH_TOKENS_KEY);
