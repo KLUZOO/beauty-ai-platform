@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { AuthRole, Lang, MockUser } from "../types";
-import { apiRequest, apiResults, type ApiAppointment, type ApiFavoriteMaster } from "../../api";
+import {
+  apiRequest,
+  apiResults,
+  getMe,
+  updateMe,
+  type ApiAppointment,
+  type ApiFavoriteMaster,
+} from "../../api";
 
 type Review = {
   appointmentId?: number;
@@ -81,21 +88,45 @@ export default function ClientDashboard({
   const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
   const [liveFavorites, setLiveFavorites] = useState<ApiFavoriteMaster[]>([]);
   const [apiNotice, setApiNotice] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     Promise.allSettled([
+      getMe(),
       apiRequest<{ results?: ApiAppointment[] } | ApiAppointment[]>("/api/appointments/my/?ordering=-start&page=1"),
       apiRequest<{ results?: ApiFavoriteMaster[] } | ApiFavoriteMaster[]>("/api/users/favorite-masters/?page=1"),
-    ]).then(([appointmentsResult, favoritesResult]) => {
+    ]).then(([profileResult, appointmentsResult, favoritesResult]) => {
       if (cancelled) return;
+      if (profileResult.status === "fulfilled") {
+        const profile = profileResult.value;
+        const name = [profile.first_name, profile.last_name]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        setProfileName(name || user.name);
+        setProfileEmail(profile.email || user.email);
+        setProfilePhone(profile.phone || "");
+        setProfileError(null);
+      } else {
+        setProfileError(
+          profileResult.reason instanceof Error
+            ? profileResult.reason.message
+            : ua
+              ? "Не вдалося завантажити профіль."
+              : "Could not load your profile.",
+        );
+      }
+      setProfileLoading(false);
       if (appointmentsResult.status === "fulfilled") setAppointments(apiResults(appointmentsResult.value));
       if (favoritesResult.status === "fulfilled") setLiveFavorites(apiResults(favoritesResult.value));
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ua, user.email, user.name]);
 
   const firstName = useMemo(() => {
     const value = user.name?.trim().split(/\s+/)[0];
@@ -176,14 +207,27 @@ export default function ClientDashboard({
 
   const saveProfile = async () => {
     const [first_name, ...lastNameParts] = profileName.trim().split(/\s+/);
+    setProfileSaving(true);
     try {
-      await apiRequest("/api/users/me/", {
-        method: "PATCH",
-        body: JSON.stringify({ first_name: first_name || "", last_name: lastNameParts.join(" "), phone: profilePhone }),
+      const profile = await updateMe({
+        first_name: first_name || "",
+        last_name: lastNameParts.join(" "),
+        email: profileEmail.trim(),
+        phone: profilePhone.trim(),
       });
+      const savedName = [profile.first_name, profile.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      setProfileName(savedName || profileName);
+      setProfileEmail(profile.email || profileEmail);
+      setProfilePhone(profile.phone || "");
+      setProfileError(null);
       setApiNotice(ua ? "Профіль збережено" : "Profile saved");
     } catch (error: any) {
       setApiNotice(error.message || (ua ? "Не вдалося зберегти профіль" : "Could not save profile"));
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -379,7 +423,11 @@ export default function ClientDashboard({
               <label><span>{ua ? "Телефон" : "Phone"}</span><input type="tel" value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} /></label>
               <label><span>Email</span><input type="email" value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} /></label>
             </div>
-            <button type="button" className="cta-btn profile-save-btn">{ua ? "Зберегти зміни" : "Save changes"}</button>
+            {profileLoading && <p className="profile-api-status" role="status">{ua ? "Завантажуємо профіль…" : "Loading profile…"}</p>}
+            {profileError && <p className="profile-api-status error" role="alert">{profileError}</p>}
+            <button type="button" className="cta-btn profile-save-btn" disabled={profileLoading || profileSaving} onClick={() => void saveProfile()}>
+              {profileSaving ? (ua ? "Зберігаємо…" : "Saving…") : ua ? "Зберегти зміни" : "Save changes"}
+            </button>
             <div className="profile-subsection profile-appointments-section">
               <div className="profile-subsection-head">
                 <div><h3>{ua ? "Мої записи" : "My bookings"}</h3><p>{ua ? "Усі ваші записи до майстрів" : "All your appointments with masters"}</p></div>

@@ -374,6 +374,21 @@ export async function getMe() {
   return apiRequest<ApiUserProfile>("/api/users/me/");
 }
 
+export type UserProfilePayload = {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  photo?: string | null;
+};
+
+export async function updateMe(payload: UserProfilePayload) {
+  return apiRequest<ApiUserProfile>("/api/users/me/", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getMasterProfile() {
   return apiRequest<ApiMaster>("/api/users/masters/me/");
 }
