@@ -297,6 +297,16 @@
   align-self: flex-start;
 }
 
+.profile-api-status {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.profile-api-status.error {
+  color: #b42318;
+}
+
 .profile-subsection {
   margin-top: 24px;
   padding-top: 20px;
