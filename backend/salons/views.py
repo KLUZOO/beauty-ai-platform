@@ -14,11 +14,23 @@ from drf_spectacular.utils import (
 )
 from rest_framework import generics
 from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+
 from users.models import MasterStatus
 
-from .models import Salon, SalonStatus
+from .filters import SalonFilter
+
+from .models import (
+    Salon,
+    SalonStatus
+)
+
 from .permissions import IsAdminOrReadOnlyAll
-from .serializers import SalonListSerializer, SalonSerializer
+
+from .serializers import (
+    SalonListSerializer,
+    SalonSerializer
+)
 
 
 @extend_schema_view(
@@ -194,8 +206,8 @@ class SalonOrderingFilter(OrderingFilter):
 )
 class SalonListView(generics.ListAPIView):
     serializer_class = SalonListSerializer
-    filter_backends = (SalonOrderingFilter,)
-
+    filter_backends = (SalonOrderingFilter, DjangoFilterBackend)
+    filterset_class = SalonFilter
     ordering_fields = {
         "rating": "average_rating",
         "reviews": "total_reviews",

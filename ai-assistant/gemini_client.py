@@ -1,4 +1,10 @@
 import google.generativeai as genai
+from google.api_core.exceptions import (
+    GoogleAPICallError,
+    DeadlineExceeded
+)
+
+from fastapi import HTTPException
 
 from config import settings
 
@@ -44,6 +50,8 @@ model = genai.GenerativeModel(
     tools=[ASSISTANT_TOOLS],
 )
 
+REQUEST_OPTIONS = {"timeout": 60.0}
+
 
 # noinspection PyTypeChecker,PyArgumentList
 async def run_conversation(message: str, history: list[dict], client_token: str | None) -> dict:
@@ -73,31 +81,49 @@ async def run_conversation(message: str, history: list[dict], client_token: str 
         )
 
     chat = model.start_chat(history=gemini_history)
-    # The message is already being sent ASYNCHRONOUSLY via await
-    response = await chat.send_message_async(message)
 
-    # Asynchronous tool call verification through the first part of the first candidate
-    while response.candidates and response.candidates[0].content.parts and response.candidates[0].content.parts[0].function_call:
-        # noinspection PyTypeChecker
-        function_call = response.candidates[0].content.parts[0].function_call
+    try:
+        # The message is already being sent ASYNCHRONOUSLY via await
+        response = await chat.send_message_async(message, request_options=REQUEST_OPTIONS)
 
-        tool_result = await dispatch_tool_call(
-            name=function_call.name,
-            args=dict(function_call.args),
-            client_token=client_token,
-        )
+        # Asynchronous tool call verification through the first part of the first candidate
+        while (
+            response.candidates
+            and response.candidates[0].content.parts
+            and response.candidates[0].content.parts[0].function_call
+        ):
+            # noinspection PyTypeChecker
+            function_call = response.candidates[0].content.parts[0].function_call
 
-        response = await chat.send_message_async(
-            genai.protos.Content(
-                parts=[
-                    genai.protos.Part(
-                        function_response={
-                            "name": function_call.name,
-                            "response": {"result": tool_result},
-                        }
-                    )
-                ]
+            tool_result = await dispatch_tool_call(
+                name=function_call.name,
+                args=dict(function_call.args),
+                client_token=client_token,
             )
+
+            response = await chat.send_message_async(
+                genai.protos.Content(
+                    parts=[
+                        genai.protos.Part(
+                            function_response={
+                                "name": function_call.name,
+                                "response": {"result": tool_result},
+                            }
+                        )
+                    ]
+                ),
+                request_options=REQUEST_OPTIONS,
+            )
+
+    except DeadlineExceeded:
+        raise HTTPException(
+            status_code=504,
+            detail="Сервіс ШІ тимчасово не відповідає. Спробуйте ще раз."
+        )
+    except GoogleAPICallError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Помилка при зверненні до Gemini API: {str(e)}"
         )
 
     clean_history = []
