@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { AuthRole, Lang, MockUser } from "../types";
+import type { AuthRole, BookingConfirmation, Lang, MockUser } from "../types";
 import {
   apiRequest,
   apiResults,
@@ -66,14 +66,18 @@ export default function ClientDashboard({
   lang,
   onHome,
   onRoleChange: _onRoleChange,
+  bookingConfirmation,
 }: {
   user: MockUser;
   lang: Lang;
   onHome: () => void;
   onRoleChange: (role: AuthRole) => void;
+  bookingConfirmation?: BookingConfirmation | null;
 }) {
   const ua = lang === "ua";
-  const [tab, setTab] = useState<"home" | "profile">("home");
+  const [tab, setTab] = useState<"home" | "profile">(
+    bookingConfirmation ? "profile" : "home",
+  );
   const [openReview, setOpenReview] = useState<number | null>(null);
   const [ratings, setRatings] = useState<Record<number, Review>>({
     0: { master: 5, salon: 5, comment: ua ? "Дякую за ідеальний манікюр! 💜" : "Thank you for the perfect manicure! 💜", sent: true },
@@ -85,7 +89,9 @@ export default function ClientDashboard({
   const [profileEmail, setProfileEmail] = useState(user.email);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifyPush, setNotifyPush] = useState(true);
-  const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
+  const [appointments, setAppointments] = useState<ApiAppointment[]>(
+    bookingConfirmation ? [bookingConfirmation.appointment] : [],
+  );
   const [liveFavorites, setLiveFavorites] = useState<ApiFavoriteMaster[]>([]);
   const [apiNotice, setApiNotice] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -120,13 +126,49 @@ export default function ClientDashboard({
         );
       }
       setProfileLoading(false);
-      if (appointmentsResult.status === "fulfilled") setAppointments(apiResults(appointmentsResult.value));
+      if (appointmentsResult.status === "fulfilled") {
+        const loadedAppointments = apiResults(appointmentsResult.value);
+        if (
+          bookingConfirmation &&
+          !loadedAppointments.some(
+            (appointment) =>
+              appointment.id === bookingConfirmation.appointment.id,
+          )
+        ) {
+          setAppointments([bookingConfirmation.appointment, ...loadedAppointments]);
+        } else {
+          setAppointments(loadedAppointments);
+        }
+      }
       if (favoritesResult.status === "fulfilled") setLiveFavorites(apiResults(favoritesResult.value));
     });
     return () => {
       cancelled = true;
     };
-  }, [ua, user.email, user.name]);
+  }, [bookingConfirmation, ua, user.email, user.name]);
+
+  const appointmentDetails = (appointment: ApiAppointment) => {
+    if (
+      bookingConfirmation &&
+      appointment.id === bookingConfirmation.appointment.id
+    ) {
+      return {
+        salon: bookingConfirmation.salonName,
+        master: bookingConfirmation.masterName,
+        service: bookingConfirmation.serviceName,
+      };
+    }
+
+    return {
+      salon: ua ? `Салон #${appointment.salon}` : `Salon #${appointment.salon}`,
+      master: ua
+        ? `Майстер #${appointment.master}`
+        : `Master #${appointment.master}`,
+      service: ua
+        ? `Послуга #${appointment.service}`
+        : `Service #${appointment.service}`,
+    };
+  };
 
   const firstName = useMemo(() => {
     const value = user.name?.trim().split(/\s+/)[0];
@@ -337,9 +379,9 @@ export default function ClientDashboard({
                     <span className="client-booking-soon">{appointmentStatus(upcomingAppointment.status, lang)}</span>
                   </div>
                   <div className="client-booking-info">
-                    <h3>{ua ? `Запис #${upcomingAppointment.id}` : `Booking #${upcomingAppointment.id}`}</h3>
-                    <p className="client-booking-salon">{ua ? `Салон #${upcomingAppointment.salon}` : `Salon #${upcomingAppointment.salon}`}</p>
-                    <p className="client-booking-master">{ua ? `Майстер #${upcomingAppointment.master}` : `Master #${upcomingAppointment.master}`}</p>
+                    <h3>{appointmentDetails(upcomingAppointment).service}</h3>
+                    <p className="client-booking-salon">{appointmentDetails(upcomingAppointment).salon}</p>
+                    <p className="client-booking-master">{appointmentDetails(upcomingAppointment).master}</p>
                     <div className="client-booking-meta"><span>▣ {appointmentDate(upcomingAppointment.start, lang)}</span><span>◷ {appointmentDate(upcomingAppointment.end, lang).split(", ").pop()}</span></div>
                   </div>
                   <button className="client-details-btn" type="button" onClick={() => void cancelAppointment(upcomingAppointment.id)}>{ua ? "Скасувати" : "Cancel"}</button>
@@ -417,6 +459,13 @@ export default function ClientDashboard({
         ) : (
           <section className="client-profile-card client-surface-panel">
             <div className="client-section-head client-profile-head"><div><h2>{ua ? "Профіль" : "Profile"}</h2><p>{ua ? "Особисті дані та налаштування акаунта" : "Personal details and account settings"}</p></div></div>
+            {bookingConfirmation && (
+              <p className="profile-booking-success" role="status">
+                {ua
+                  ? "Запис успішно створено — він уже доданий до вашого профілю."
+                  : "Your booking was created and added to your profile."}
+              </p>
+            )}
             <div className="profile-photo-row"><div className="dashboard-avatar profile-avatar">{user.avatar ? <img src={user.avatar} alt={user.name} /> : <span className="image-placeholder" aria-hidden="true">✦</span>}</div><button type="button" className="booking-action-btn ghost">{ua ? "Змінити фото" : "Change photo"}</button></div>
             <div className="profile-fields-grid">
               <label><span>{ua ? "Ім'я" : "Name"}</span><input type="text" value={profileName} onChange={(event) => setProfileName(event.target.value)} /></label>
@@ -437,8 +486,8 @@ export default function ClientDashboard({
                 <div className="profile-appointments-list">
                   {appointments.map((appointment) => (
                     <div className="profile-appointment-row" key={appointment.id}>
-                      <div><b>{ua ? `Запис #${appointment.id}` : `Booking #${appointment.id}`}</b><span>{appointmentDate(appointment.start, lang)}</span></div>
-                      <div><span>{ua ? `Майстер #${appointment.master} · Салон #${appointment.salon}` : `Master #${appointment.master} · Salon #${appointment.salon}`}</span><b className={`appointment-status appointment-status-${appointment.status}`}>{appointmentStatus(appointment.status, lang)}</b></div>
+                       <div><b>{appointmentDetails(appointment).service}</b><span>{appointmentDate(appointment.start, lang)}</span></div>
+                       <div><span>{appointmentDetails(appointment).master} · {appointmentDetails(appointment).salon}</span><b className={`appointment-status appointment-status-${appointment.status}`}>{appointmentStatus(appointment.status, lang)}</b></div>
                     </div>
                   ))}
                 </div>

@@ -28,8 +28,10 @@ import {
   type ApiSalon,
   type ApiService,
   type ApiUserProfile,
+  type ApiAppointment,
   verifyEmail,
 } from "./api";
+import type { BookingConfirmation } from "./dashboard/types";
 
 type CardBooking = {
   master: number;
@@ -3107,7 +3109,7 @@ function BookingModal({
   card: CardData;
   lang: Lang;
   onClose: () => void;
-  onCreated: (appointment: import("./api").ApiAppointment) => void;
+  onCreated: (appointment: ApiAppointment, booking: CardBooking) => void;
 }) {
   const ua = lang === "ua";
   const firstDate = localDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000));
@@ -3178,7 +3180,7 @@ function BookingModal({
           ? { promo_id: selectedBooking.promoId }
           : {}),
       });
-      onCreated(appointment);
+      onCreated(appointment, selectedBooking);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -3393,6 +3395,8 @@ export default function App() {
     useState<SelectedMapLocation | null>(null);
   const [selectedSalonId, setSelectedSalonId] = useState<number | null>(null);
   const [bookingCard, setBookingCard] = useState<CardData | null>(null);
+  const [bookingConfirmation, setBookingConfirmation] =
+    useState<BookingConfirmation | null>(null);
   const [liveHomeData, setLiveHomeData] = useState<{
     salons?: CardData[];
     masters?: CardData[];
@@ -3766,6 +3770,7 @@ export default function App() {
         <DashboardShell
           user={user}
           lang={lang}
+          bookingConfirmation={bookingConfirmation}
           onHome={() => setView("home")}
           onRoleChange={(role) =>
             setUser((prev) => (prev ? { ...prev, role, avatar: null } : prev))
@@ -4303,7 +4308,13 @@ export default function App() {
           card={bookingCard}
           lang={lang}
           onClose={() => setBookingCard(null)}
-          onCreated={() => {
+           onCreated={(appointment, booking) => {
+             setBookingConfirmation({
+               appointment,
+               masterName: booking.masterName,
+               salonName: booking.salonName,
+               serviceName: booking.serviceName,
+             });
             setBookingCard(null);
             setView("dashboard");
           }}

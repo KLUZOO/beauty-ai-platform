@@ -6,3 +6,20 @@ export type MockUser = {
   role: AuthRole;
   avatar?: string | null;
 };
+
+export type BookingConfirmation = {
+  appointment: {
+    id: number;
+    master: number;
+    salon: number;
+    service: number;
+    promo_id?: number | null;
+    start: string;
+    end: string;
+    status: string;
+    created_at: string;
+  };
+  masterName: string;
+  salonName: string;
+  serviceName: string;
+};

@@ -307,6 +307,17 @@
   color: #b42318;
 }
 
+.profile-booking-success {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(64, 160, 107, 0.24);
+  border-radius: 12px;
+  background: rgba(224, 248, 233, 0.72);
+  color: #287847;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .profile-subsection {
   margin-top: 24px;
   padding-top: 20px;
