@@ -214,6 +214,10 @@ body {
   min-height: 440px;
 
   background: #f7fbfa;
+  background-image: url("./assets/hero5.png");
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: auto 100%;
 
   margin: 0;
 
@@ -1459,11 +1463,17 @@ more-filters-text-btn {
   .hero-full-width {
     min-height: 410px;
     border-radius: 20px;
-    background-position: 62% center;
+    background-position: right center;
+    background-size: auto 100%;
   }
 
   .hero-full-width::before {
-    display: none;
+    background: linear-gradient(
+      90deg,
+      rgba(247, 251, 250, 0.98) 0%,
+      rgba(247, 251, 250, 0.78) 52%,
+      rgba(247, 251, 250, 0.12) 100%
+    );
   }
   .hero-overlay-content {
     min-height: 410px;
