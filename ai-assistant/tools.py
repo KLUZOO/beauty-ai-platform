@@ -33,11 +33,15 @@ find_available_slots_declaration = FunctionDeclaration(
 
 search_salons_declaration = FunctionDeclaration(
     name="search_salons",
-    description="Знайти салони, за бажанням відфільтровані по місту.",
+    description="Знайти салони, за бажанням відфільтровані за містом або (частковою) назвою.",
     parameters={
         "type": "object",
         "properties": {
             "city": {"type": "string", "description": "Місто (необов'язково)"},
+            "name": {
+                "type": "string",
+                "description": "Назва або часткова назва салону (наприклад, 'Поплавок')"
+            },
         },
     },
 )

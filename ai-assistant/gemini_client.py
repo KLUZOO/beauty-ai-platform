@@ -1,7 +1,9 @@
 import google.generativeai as genai
+from datetime import datetime
 from google.api_core.exceptions import (
     GoogleAPICallError,
-    DeadlineExceeded
+    DeadlineExceeded,
+    ResourceExhausted
 )
 
 from fastapi import HTTPException
@@ -19,13 +21,38 @@ from serialization_utils import to_plain
 genai.configure(api_key=settings.gemini_api_key)
 
 
-SYSTEM_INSTRUCTION = """
+def get_system_instruction() -> str:
+    now = datetime.now()
+    current_date = now.strftime("%Y-%m-%d")
+    current_weekday = now.strftime("%A")
+
+    return f"""
 Ти — дружній AI-асистент beauty-платформи. Твоя єдина зона відповідальності:
 - підібрати салон і майстра
 - підібрати послугу під потреби клієнта
 - знайти вільний час для запису
 - забронювати запис (тільки після явного підтвердження клієнта)
 - дати загальну пораду по догляду за собою (шкіра, волосся тощо)
+
+КОНТЕКСТ ЧАСУ ТА ДАТИ:
+- Сьогоднішня дата: {current_date} ({current_weekday}).
+- Для будь-яких відносних дат ("сьогодні", "завтра", "післязавтра", "наступного вівторка", "цими вихідними") 
+  ти ПОВИННА САМОСТІЙНО обчислити точну дату у форматі YYYY-MM-DD, виходячи з {current_date}.
+- НЕ запитуй у користувача точне число та місяць, якщо він дав відносну дату (наприклад, "завтра" або "післязавтра") 
+  чи вказав розмитий час ("вдень", "зранку", "ввечері"). Одразу шукай вільні слоти на цей період!
+
+ОБРОБКА ОДРУКІВОК ТА НЕЧІТКИХ ЗАПИТІВ:
+- Якщо запит користувача містить описки або сленг (наприклад, "хтовільний" = "будь-який вільний майстер", 
+  "нарощєня" = "нарощування"), завжди інтерпретуй його за загальним змістом.
+- Якщо за результатами пошуку чи виклику інструменту повернулося "status": "not_found" або порожній список, 
+  НЕ видавай порожню відповідь. Замість цього дружньо повідом про відсутність конкретного майстра/слоту 
+  та запропонуй усі доступні альтернативи (або запитай уточнення).
+  
+ПРАВИЛА ОБРОБКИ ОПИСОК ТА ВІДСУТНІХ ДАНИХ:
+- Якщо в назві міста є явна описка (наприклад, "Кинві", "Кимв", "Лвів"), ВСЕОДНО передавай у пошуковий 
+  інструмент нормалізоване місто (наприклад, city="Київ").
+- Якщо інструмент пошуку повертає порожній список (салонів/слотів не знайдено), НІКОЛИ не повертай порожню відповідь. 
+  Чітко повідом клієнту, що за даними параметрами нічого не знайдено, та запропонуй уточнити місто чи назву.
 
 Завжди спілкуйся українською, коротко і дружньо.
 Ніколи не бронюй запис без явного "так, підтверджую" від клієнта.
@@ -44,11 +71,6 @@ SYSTEM_INSTRUCTION = """
 твоєї компетенції, і одразу перехід до пропозиції допомогти по темі.
 """
 
-model = genai.GenerativeModel(
-    model_name="gemini-3.6-flash",
-    system_instruction=SYSTEM_INSTRUCTION,
-    tools=[ASSISTANT_TOOLS],
-)
 
 REQUEST_OPTIONS = {"timeout": 60.0}
 
@@ -59,6 +81,12 @@ async def run_conversation(message: str, history: list[dict], client_token: str 
 
     Takes history as a list[dict] from FastAPI and returns a list[dict].
     """
+    model = genai.GenerativeModel(
+        model_name="gemini-3.6-flash",
+        system_instruction=get_system_instruction(),
+        tools=[ASSISTANT_TOOLS],
+    )
+
     gemini_history = []
     for entry in history:
         parts_list = []
@@ -101,6 +129,17 @@ async def run_conversation(message: str, history: list[dict], client_token: str 
                 client_token=client_token,
             )
 
+            # Protection against empty DB result (if nothing is found for the query)
+            if (
+                tool_result is None
+                or tool_result in ([], {})
+                or (isinstance(tool_result, dict) and "salons" in tool_result and not tool_result["salons"])
+            ):
+                tool_result = {
+                    "status": "not_found",
+                    "message": "За вказаним запитом або критерієм нічого не знайдено."
+                }
+
             response = await chat.send_message_async(
                 genai.protos.Content(
                     parts=[
@@ -115,6 +154,12 @@ async def run_conversation(message: str, history: list[dict], client_token: str 
                 request_options=REQUEST_OPTIONS,
             )
 
+    except ResourceExhausted:
+        # Intercept Rate Limit from Google API (429)
+        raise HTTPException(
+            status_code=429,
+            detail="Перевищено ліміт запитів до ШІ. Зачекайте 5-10 секунд і спробуйте знову."
+        )
     except DeadlineExceeded:
         raise HTTPException(
             status_code=504,

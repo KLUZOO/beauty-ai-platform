@@ -40,8 +40,9 @@ class DRFClient:
         response.raise_for_status()
         return response.json()
 
-    async def search_salons(self, city: str | None = None) -> dict:
-        params = {"city": city} if city else {}
+    async def search_salons(self, city: str | None = None, name: str | None = None) -> dict:
+        params = {k: v for k, v in {"city": city, "name": name}.items() if v}
+
         response = await self.client.get(
             "api/salons/",
             params=params,
@@ -49,20 +50,19 @@ class DRFClient:
         response.raise_for_status()
         data = response.json()
 
-        # If DRF returns a paginated object {"results": [...]}, we get a clean list
         salons_list = data.get("results", data) if isinstance(data, dict) else data
 
-        # We leave only the most important fields for AI to avoid inflating the Gemini context
-        cleaned_salons = []
-        for salon in salons_list:
-            cleaned_salons.append({
+        cleaned_salons = [
+            {
                 "id": salon.get("id"),
                 "name": salon.get("name"),
                 "city": salon.get("location", {}).get("city_name") if isinstance(salon.get("location"), dict) else None,
-                "address": salon.get("location", {}).get("address") if isinstance(salon.get("location"), dict) else None,
+                "address": salon.get("location", {}).get("address") if isinstance(salon.get("location"),
+                                                                                  dict) else None,
                 "rating": salon.get("average_rating"),
                 "total_reviews": salon.get("total_reviews"),
-            })
+            }
+            for salon in salons_list
+        ]
 
-        res = {"salons": cleaned_salons}
-        return res
+        return {"salons": cleaned_salons}
