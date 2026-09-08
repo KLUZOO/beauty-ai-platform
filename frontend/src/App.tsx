@@ -8,12 +8,11 @@ import beautyAISparkles from "./assets/beauty-ai-sparkles.svg";
 import DashboardShell from "./dashboard/DashboardShell";
 import {
   apiRequest,
-  apiResults,
+  listAllPages,
   clearTokens,
   getAccessToken,
   getMe,
   login,
-  listMasters,
   register,
   createAppointment,
   getSalon,
@@ -145,6 +144,178 @@ function matchesSearch(value: string, query: string) {
       normalizedValue.includes(token) ||
       (token.length > 3 && normalizedValue.includes(token.slice(0, -1))),
   );
+}
+
+type SearchIntent = {
+  category: string | null;
+  availability: string | null;
+  city: string | null;
+  district: string | null;
+  textQuery: string;
+  summary: string;
+};
+
+const NATURAL_SEARCH_WORDS = new Set([
+  "хочу",
+  "хочеться",
+  "потрібен",
+  "потрібна",
+  "потрібно",
+  "шукаю",
+  "знайти",
+  "знайди",
+  "підбери",
+  "підберіть",
+  "порадь",
+  "порадьте",
+  "запис",
+  "записатися",
+  "записатись",
+  "послугу",
+  "послуга",
+  "майстра",
+  "майстрів",
+  "салон",
+  "салони",
+  "будь",
+  "ласка",
+  "please",
+  "find",
+  "want",
+  "need",
+  "book",
+  "booking",
+  "me",
+  "for",
+]);
+
+const CATEGORY_LABELS: Record<string, { ua: string; en: string }> = {
+  manicure: { ua: "манікюр", en: "manicure" },
+  pedicure: { ua: "педикюр", en: "pedicure" },
+  haircut: { ua: "стрижку", en: "a haircut" },
+  coloring: { ua: "фарбування", en: "coloring" },
+  botox: { ua: "ботокс", en: "botox" },
+  massage: { ua: "масаж", en: "massage" },
+  eyelashes: { ua: "вії", en: "lashes" },
+  brows: { ua: "брови", en: "brows" },
+  makeup: { ua: "макіяж", en: "makeup" },
+  cosmetology: { ua: "косметологію", en: "cosmetology" },
+  depilation: { ua: "депіляцію", en: "depilation" },
+  solarium: { ua: "солярій", en: "solarium" },
+  facial: { ua: "чистку обличчя", en: "a facial" },
+  spa: { ua: "SPA", en: "SPA" },
+};
+
+function interpretSearch(message: string, lang: Lang): SearchIntent {
+  const normalizedMessage = normalize(message);
+  const category =
+    Object.entries(CATEGORY_TERMS).find(([, terms]) =>
+      matchesTerms(normalizedMessage, terms),
+    )?.[0] ?? null;
+  const availability = normalizedMessage.match(
+    /\b(завтра|tomorrow)\b/,
+  )
+    ? "tomorrow"
+    : normalizedMessage.match(/\b(сьогодні|today|now|зараз)\b/)
+      ? "today"
+      : normalizedMessage.match(/\b(тиждень|тижня|week)\b/)
+        ? "week"
+        : null;
+  const city = /\b(київ|києва|kyiv)\b/.test(normalizedMessage)
+    ? "kyiv"
+    : /\b(львів|lviv)\b/.test(normalizedMessage)
+      ? "lviv"
+      : /\b(одеса|odesa)\b/.test(normalizedMessage)
+        ? "odesa"
+        : /\b(дніпро|dnipro)\b/.test(normalizedMessage)
+          ? "dnipro"
+          : null;
+  const district =
+    Object.entries(DISTRICT_TERMS).find(([, terms]) =>
+      matchesTerms(normalizedMessage, terms),
+    )?.[0] ?? null;
+  const recognizedTerms = [
+    ...SEARCH_STOP_WORDS,
+    ...NATURAL_SEARCH_WORDS,
+    ...(category ? CATEGORY_TERMS[category] : []),
+    ...(city
+      ? city === "kyiv"
+        ? ["київ", "києва", "kyiv"]
+        : city === "lviv"
+          ? ["львів", "lviv"]
+          : city === "odesa"
+            ? ["одеса", "odesa"]
+            : ["дніпро", "dnipro"]
+      : []),
+    ...(district ? DISTRICT_TERMS[district] : []),
+    "сьогодні",
+    "завтра",
+    "today",
+    "tomorrow",
+    "now",
+    "зараз",
+    "тиждень",
+    "тижня",
+  ].map(normalize);
+  const textQuery = normalizedMessage
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(
+      (token) =>
+        token.length > 1 &&
+        !recognizedTerms.some(
+          (recognized) =>
+            token === recognized ||
+            (recognized.length > 3 && token.startsWith(recognized.slice(0, -1))),
+        ),
+    )
+    .join(" ");
+  const categoryLabel = category
+    ? CATEGORY_LABELS[category]?.[lang] ?? category
+    : null;
+  const availabilityLabel =
+    availability === "tomorrow"
+      ? lang === "ua"
+        ? "на завтра"
+        : "for tomorrow"
+      : availability === "today"
+        ? lang === "ua"
+          ? "на сьогодні"
+          : "for today"
+        : availability === "week"
+          ? lang === "ua"
+            ? "цього тижня"
+            : "this week"
+          : "";
+  const locationLabel = district
+    ? lang === "ua"
+      ? `у районі ${DISTRICT_TERMS[district][0]}`
+      : `in ${district}`
+    : city
+      ? city === "kyiv"
+        ? lang === "ua"
+          ? "у Києві"
+          : "in Kyiv"
+        : city
+      : "";
+  const requestLabel = [categoryLabel, availabilityLabel, locationLabel]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    category,
+    availability,
+    city,
+    district,
+    textQuery,
+    summary:
+      requestLabel || textQuery
+        ? lang === "ua"
+          ? `Знайшла варіанти${requestLabel ? `: ${requestLabel}` : ""}. Перегляньте результати нижче.`
+          : `I found options${requestLabel ? `: ${requestLabel}` : ""}. Check the results below.`
+        : lang === "ua"
+          ? "Опишіть послугу, дату або район — я підберу відповідні варіанти."
+          : "Describe a service, date, or district and I’ll find matching options.",
+  };
 }
 
 function matchesCommonFilters(
@@ -3489,49 +3660,29 @@ export default function App() {
 
       const [salonsResult, servicesResult, promotionsResult, reviewsResult] =
         await Promise.allSettled([
-          apiRequest<{ results?: ApiSalon[] } | ApiSalon[]>(
-            "/api/salons/?ordering=-rating&page=1",
-            {},
-            true,
-            false,
-          ),
-          apiRequest<{ results?: ApiService[] } | ApiService[]>(
-            "/api/services/?page=1",
-            {},
-            true,
-            false,
-          ),
-          apiRequest<{ results?: ApiPromotion[] } | ApiPromotion[]>(
-            "/api/promotions/?active=true&page=1",
-            {},
-            true,
-            false,
-          ),
-          apiRequest<{ results?: ApiReview[] } | ApiReview[]>(
-            "/api/reviews/?page=1",
-            {},
-            true,
-            false,
-          ),
+          listAllPages<ApiSalon>("/api/salons/?ordering=-rating"),
+          listAllPages<ApiService>("/api/services/"),
+          listAllPages<ApiPromotion>("/api/promotions/?active=true"),
+          listAllPages<ApiReview>("/api/reviews/"),
         ]);
 
       if (cancelled) return;
 
       const salons =
         salonsResult.status === "fulfilled"
-          ? apiResults(salonsResult.value)
+          ? salonsResult.value
           : [];
       const services =
         servicesResult.status === "fulfilled"
-          ? apiResults(servicesResult.value)
+          ? servicesResult.value
           : [];
       const promotions =
         promotionsResult.status === "fulfilled"
-          ? apiResults(promotionsResult.value)
+          ? promotionsResult.value
           : [];
       const reviews =
         reviewsResult.status === "fulfilled"
-          ? apiResults(reviewsResult.value)
+          ? reviewsResult.value
           : [];
       const serviceMasterCards = apiServiceMastersToCards(
         services as ApiService[],
@@ -3600,7 +3751,7 @@ export default function App() {
 
       // Masters are loaded separately so a protected or slow masters endpoint
       // can never delay or replace the salons section.
-      void listMasters({ page: 1, ordering: "-rating" })
+      void listAllPages<ApiMaster>("/api/users/masters/?ordering=-rating", 100, true)
         .then((masters) => {
           if (cancelled || masters.length === 0) return;
           setLiveHomeData((current) => ({
@@ -3692,16 +3843,33 @@ export default function App() {
     const message = searchInput.trim();
     if (!message || aiLoading) return;
 
-    setSearchQuery(message);
+    const intent = interpretSearch(message, lang);
+    setSearchQuery(intent.textQuery);
+    if (intent.category) setActiveCategory(intent.category);
+    if (intent.availability || intent.city || intent.district) {
+      setFilters((current) => ({
+        ...current,
+        ...(intent.availability ? { availability: intent.availability } : {}),
+        ...(intent.city ? { city: intent.city } : {}),
+        ...(intent.district ? { district: intent.district } : {}),
+      }));
+    }
     setAiLoading(true);
     setAiError(null);
 
     try {
-      const response = await fetch("http://localhost:8001/chat", {
+      const aiChatUrl = import.meta.env.VITE_AI_CHAT_URL?.trim();
+      if (!aiChatUrl) {
+        // The imported frontend has no AI service of its own. Keep natural
+        // language search useful without making a request to the user's
+        // localhost, where the old implementation could never work.
+        setAiResponse(intent.summary);
+        return;
+      }
+
+      const response = await fetch(aiChatUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message,
           conversation_id: conversationId,
@@ -3733,19 +3901,21 @@ export default function App() {
         const answer = [data.response, data.message, data.answer, data.content].find(
           (value): value is string => typeof value === "string",
         );
-        setAiResponse(answer ?? JSON.stringify(payload, null, 2));
+        setAiResponse(answer ?? intent.summary);
       } else {
-        setAiResponse(
-          typeof payload === "string" ? payload : "Отримано порожню відповідь.",
-        );
+        setAiResponse(typeof payload === "string" ? payload : intent.summary);
       }
     } catch (requestError) {
-      setAiError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Не вдалося отримати відповідь від AI.",
+      // Search filters are already applied, so a temporary AI service error
+      // must not make the search itself look broken.
+      setAiResponse(
+        `${intent.summary} ${
+          lang === "ua"
+            ? "AI-відповідь тимчасово недоступна, але пошук уже застосовано."
+            : "The AI reply is temporarily unavailable, but the search was applied."
+        }`,
       );
-      setAiResponse(null);
+      setAiError(null);
     } finally {
       setAiLoading(false);
     }

@@ -223,6 +223,7 @@ export type ApiReferralEvent = {
 };
 
 type ApiCollection<T> = T[] | { results?: T[] };
+type ApiPage<T> = T[] | { results?: T[]; next?: string | null };
 
 function readTokens(): AuthTokens | null {
   try {
@@ -324,6 +325,31 @@ export async function apiRequest<T = unknown>(
 
 export function apiResults<T>(payload: T[] | { results?: T[] }): T[] {
   return Array.isArray(payload) ? payload : (payload?.results ?? []);
+}
+
+export async function listAllPages<T>(
+  path: string,
+  pageSize = 100,
+  includeAuth = false,
+) {
+  const results: T[] = [];
+  const separator = path.includes("?") ? "&" : "?";
+
+  for (let page = 1; page <= 100; page += 1) {
+    const payload = await apiRequest<ApiPage<T>>(
+      `${path}${separator}page=${page}&page_size=${pageSize}`,
+      {},
+      true,
+      includeAuth,
+    );
+    const items = apiResults(payload);
+    results.push(...items);
+
+    if (Array.isArray(payload) || items.length === 0 || !payload.next)
+      break;
+  }
+
+  return results;
 }
 
 export async function login(email: string, password: string) {
