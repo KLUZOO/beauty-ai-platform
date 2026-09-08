@@ -116,6 +116,36 @@ const SEARCH_STOP_WORDS = new Set([
   "kyiv",
 ]);
 
+const AI_CONVERSATION_STORAGE_KEY = "beautyai_ai_conversation_id";
+
+function readAiConversationId(): string | number | null {
+  try {
+    const stored = sessionStorage.getItem(AI_CONVERSATION_STORAGE_KEY);
+    if (!stored) return null;
+    const parsed: unknown = JSON.parse(stored);
+    return typeof parsed === "string" || typeof parsed === "number"
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeAiConversationId(conversationId: string | number | null) {
+  try {
+    if (conversationId === null) {
+      sessionStorage.removeItem(AI_CONVERSATION_STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(
+        AI_CONVERSATION_STORAGE_KEY,
+        JSON.stringify(conversationId),
+      );
+    }
+  } catch {
+    // The current conversation still works if browser storage is unavailable.
+  }
+}
+
 function normalize(value: string) {
   return value
     .toLocaleLowerCase("uk-UA")
@@ -2564,6 +2594,7 @@ function ReviewsSection({
   const [selectedReview, setSelectedReview] = useState<ApiReview | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const visibleReviews = reviews.slice(0, 8);
 
   const openReview = async (reviewId: number) => {
     setDetailLoading(true);
@@ -2604,7 +2635,7 @@ function ReviewsSection({
           </div>
           {!loading && !error && (
             <span className="results-badge">
-              {reviews.length} {lang === "ua" ? "відгуків" : "reviews"}
+                {visibleReviews.length} {lang === "ua" ? "відгуків" : "reviews"}
             </span>
           )}
         </div>
@@ -2631,9 +2662,9 @@ function ReviewsSection({
           </div>
         )}
 
-        {!loading && !error && reviews.length > 0 && (
+        {!loading && !error && visibleReviews.length > 0 && (
           <div className="reviews-grid">
-            {reviews.map((review) => (
+            {visibleReviews.map((review) => (
               <button
                 type="button"
                 className="review-card"
@@ -3534,7 +3565,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [conversationId, setConversationId] = useState<
     string | number | null
-  >(null);
+  >(readAiConversationId);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -3858,14 +3889,10 @@ export default function App() {
     setAiError(null);
 
     try {
-      const aiChatUrl = import.meta.env.VITE_AI_CHAT_URL?.trim();
-      if (!aiChatUrl) {
-        // The imported frontend has no AI service of its own. Keep natural
-        // language search useful without making a request to the user's
-        // localhost, where the old implementation could never work.
-        setAiResponse(intent.summary);
-        return;
-      }
+      // In development this is proxied to the AI service on port 8001.
+      // Set VITE_AI_CHAT_URL for a deployed or separately hosted service.
+      const aiChatUrl =
+        import.meta.env.VITE_AI_CHAT_URL?.trim() || "/ai-chat/chat";
 
       const response = await fetch(aiChatUrl, {
         method: "POST",
@@ -3896,26 +3923,31 @@ export default function App() {
           data.conversation_id === null
         ) {
           setConversationId(data.conversation_id);
+          writeAiConversationId(data.conversation_id);
         }
 
-        const answer = [data.response, data.message, data.answer, data.content].find(
-          (value): value is string => typeof value === "string",
-        );
+        const answer = [
+          data.reply,
+          data.response,
+          data.message,
+          data.answer,
+          data.content,
+        ].find((value): value is string => typeof value === "string");
         setAiResponse(answer ?? intent.summary);
       } else {
         setAiResponse(typeof payload === "string" ? payload : intent.summary);
       }
     } catch (requestError) {
-      // Search filters are already applied, so a temporary AI service error
-      // must not make the search itself look broken.
+      // Search filters are already applied, so an AI service error should not
+      // undo the useful local filtering that happened before the request.
       setAiResponse(
-        `${intent.summary} ${
-          lang === "ua"
-            ? "AI-відповідь тимчасово недоступна, але пошук уже застосовано."
-            : "The AI reply is temporarily unavailable, but the search was applied."
-        }`,
+        intent.summary,
       );
-      setAiError(null);
+      setAiError(
+        lang === "ua"
+          ? "AI-пошук тимчасово недоступний, але фільтри вже застосовано."
+          : "AI search is temporarily unavailable, but the filters were applied.",
+      );
     } finally {
       setAiLoading(false);
     }
