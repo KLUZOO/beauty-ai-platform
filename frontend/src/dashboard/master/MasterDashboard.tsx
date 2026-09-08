@@ -103,7 +103,7 @@ export default function MasterDashboard({ user, lang, onHome, onRoleChange }: { 
 
           <section className="master-card-v2 master-reviews-v2">
             <div className="master-card-head-v2"><div><h2>Останні відгуки</h2></div><button className="link" type="button">Переглянути всі</button></div>
-            {reviews.map((review, i) => <article key={review.name}><div className="master-review-avatar-v2">{review.name[0]}</div><div><b>{review.name}</b><span>{review.date}</span><p>{review.text}</p></div><strong>★★★★★ <span>{review.rating}</span></strong></article>)}
+            {reviews.map((review) => <article key={review.name}><div className="master-review-avatar-v2">{review.name[0]}</div><div><b>{review.name}</b><span>{review.date}</span><p className="master-review-text-v2">{review.text}</p></div><strong>★★★★★ <span>{review.rating}</span></strong></article>)}
             <button className="master-add-work-v2" type="button">▧ &nbsp; Додати фото робіт</button>
           </section>
         </div>

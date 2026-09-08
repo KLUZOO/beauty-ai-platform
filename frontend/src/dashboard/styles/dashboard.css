@@ -802,6 +802,7 @@
 .review-comment textarea {
   width: 100%;
   min-height: 88px;
+  max-height: 180px;
   resize: vertical;
   padding: 12px 14px;
   border: 1px solid var(--border);
@@ -1996,4 +1997,20 @@
   .master-profile-details-v2 {
     grid-template-columns: 1fr;
   }
+}
+
+.client-review-card > p {
+  display: -webkit-box;
+  max-height: 66px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.master-review-text-v2 {
+  display: -webkit-box;
+  max-height: 36px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
