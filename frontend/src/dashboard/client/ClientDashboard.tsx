@@ -295,7 +295,7 @@ export default function ClientDashboard({
         </div>
         <label className="review-comment">
           <span>{ua ? "Коментар" : "Comment"}</span>
-          <textarea value={review.comment} onChange={(event) => patchReview(index, { comment: event.target.value })} rows={3} />
+          <textarea maxLength={1000} value={review.comment} onChange={(event) => patchReview(index, { comment: event.target.value })} rows={3} />
         </label>
         <div className="review-submit-row">
           <span className={!review.master || !review.salon ? "review-hint" : "review-hint ready"}>
