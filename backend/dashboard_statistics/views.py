@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.permissions import IsMaster
@@ -21,8 +22,14 @@ class MasterStatisticsView(APIView):
 
 
 class AdminStatisticsView(APIView):
-    #
+    permission_classes = (IsAdmin,)
 
+    @extend_schema(
+        summary="Get admin statistics",
+        description="Returns statistics for the admin dashboard.",
+        responses={200: AdminStatisticsSerializer},
+        tags=["Admin Statistics"],
+    )
     def get(self, request) -> Response:
         data = StatisticsService.get_admin_statistics(admin=request.user)
         serializer = AdminStatisticsSerializer(data)
