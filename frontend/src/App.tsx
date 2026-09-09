@@ -3889,18 +3889,30 @@ export default function App() {
     setAiError(null);
 
     try {
-      // In development this is proxied to the AI service on port 8001.
-      // Set VITE_AI_CHAT_URL for a deployed or separately hosted service.
+      // Keep the request same-origin by default so the Vite proxy can forward
+      // it to the AI service without browser CORS or mixed-content failures.
+      // Set VITE_AI_CHAT_URL for a deployed app with its own /chat proxy.
       const aiChatUrl =
         import.meta.env.VITE_AI_CHAT_URL?.trim() || "/ai-chat/chat";
 
+      const aiHeaders = new Headers({ "Content-Type": "application/json" });
+      const accessToken = getAccessToken();
+      if (accessToken) {
+        aiHeaders.set("Authorization", `Bearer ${accessToken}`);
+      }
+
+      const requestBody: {
+        message: string;
+        conversation_id?: string | number;
+      } = { message };
+      if (conversationId !== null) {
+        requestBody.conversation_id = conversationId;
+      }
+
       const response = await fetch(aiChatUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          conversation_id: conversationId,
-        }),
+        headers: aiHeaders,
+        body: JSON.stringify(requestBody),
       });
       const payload: unknown = await response.json().catch(() => null);
 

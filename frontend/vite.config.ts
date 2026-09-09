@@ -17,7 +17,9 @@ export default defineConfig(({ mode }) => {
           secure: false,
         },
         "/ai-chat": {
-          target: env.VITE_AI_CHAT_PROXY_TARGET || "http://localhost:8001",
+          target:
+            env.VITE_AI_CHAT_PROXY_TARGET ||
+            "http://beautyaiservice.polandcentral.cloudapp.azure.com:8001",
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/ai-chat/, ""),
