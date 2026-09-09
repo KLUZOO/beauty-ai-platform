@@ -3901,13 +3901,10 @@ export default function App() {
         aiHeaders.set("Authorization", `Bearer ${accessToken}`);
       }
 
-      const requestBody: {
-        message: string;
-        conversation_id?: string | number;
-      } = { message };
-      if (conversationId !== null) {
-        requestBody.conversation_id = conversationId;
-      }
+      const requestBody = {
+        message,
+        conversation_id: conversationId,
+      };
 
       const response = await fetch(aiChatUrl, {
         method: "POST",
