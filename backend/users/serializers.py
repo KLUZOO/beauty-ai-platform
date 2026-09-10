@@ -117,12 +117,28 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 # HELPER / NESTED SERIALIZERS
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = (
+            "id",
+            "country",
+            "city_name",
+            "address",
+            "region",
+            "coordinates",
+            "timezone",
+            "city_tier",
+        )
 class SalonShortSerializer(serializers.ModelSerializer):
+    location = LocationSerializer(read_only=True)
     class Meta:
         model = Salon
         fields = (
             "id",
             "name",
+            "location",
         )
 
 
