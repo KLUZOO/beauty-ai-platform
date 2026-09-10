@@ -3,9 +3,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.permissions import IsMaster
 
-from dashboard_statistics.permissions import IsAdmin
 from dashboard_statistics.serializers import (
-    AdminStatisticsSerializer,
+    AdminAnalyticsSerializer,
+    AdminDashboardSerializer,
     StatisticsSerializer,
 )
 from dashboard_statistics.services import StatisticsService
@@ -21,16 +21,31 @@ class MasterStatisticsView(APIView):
         return Response(serializer.data)
 
 
-class AdminStatisticsView(APIView):
-    permission_classes = (IsAdmin,)
+class AdminDashboardView(APIView):
+    permission_classes = (IsMaster,)
 
     @extend_schema(
-        summary="Get admin statistics",
+        summary="Get admin dashboard statistics",
         description="Returns statistics for the admin dashboard.",
-        responses={200: AdminStatisticsSerializer},
+        responses={200: AdminDashboardSerializer},
         tags=["Admin Statistics"],
     )
     def get(self, request) -> Response:
-        data = StatisticsService.get_admin_statistics(admin=request.user)
-        serializer = AdminStatisticsSerializer(data)
+        data = StatisticsService.get_admin_dashboard(admin=request.user)
+        serializer = AdminDashboardSerializer(data)
+        return Response(serializer.data)
+
+
+class AdminAnalyticsView(APIView):
+    permission_classes = (IsMaster,)
+
+    @extend_schema(
+        summary="Get admin analytics",
+        description="Returns analytics for the admin dashboard.",
+        responses={200: AdminAnalyticsSerializer},
+        tags=["Admin Statistics"],
+    )
+    def get(self, request) -> Response:
+        data = StatisticsService.get_admin_analytics(admin=request.user)
+        serializer = AdminAnalyticsSerializer(data)
         return Response(serializer.data)

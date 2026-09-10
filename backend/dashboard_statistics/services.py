@@ -10,7 +10,44 @@ User = get_user_model()
 
 class StatisticsService:
     @staticmethod
-    def get_admin_statistics(admin: User):
+    def get_admin_analytics(admin: User):
+        return {
+            "period": "30d",
+            "date_from": "2026-08-11",
+            "date_to": "2026-09-09",
+            "kpi": {
+                "total_revenue": 125000,
+                "avg_booking_value": 820,
+                "cancellation_rate": 12.4,
+                "no_show_rate": 6.1,
+                "repeat_clients_rate": 48.2,
+            },
+            "revenue_trend": [{"date": "2026-08-11", "value": 4200}],
+            "revenue_by_period": [{"label": "11 Aug", "value": 4200}],
+            "payment_methods": [{"label": "Card", "value": 120}],
+            "booking_status": [{"label": "completed", "value": 210}],
+            "popular_services": [{"label": "Манікюр", "value": 95}],
+            "revenue_by_city": [{"label": "Київ", "value": 54000}],
+            "client_mix": [
+                {"label": "New", "value": 80},
+                {"label": "Returning", "value": 65},
+            ],
+            "peak_hours": [{"label": "14:00", "value": 31}],
+            "bookings_by_weekday": [{"label": "Mon", "value": 42}],
+            "master_performance": [
+                {
+                    "name": "Ім'я Прізвище",
+                    "specialization": "Манікюр",
+                    "city": "Київ",
+                    "bookings": 24,
+                    "revenue": 18500,
+                    "rating": 4.8,
+                }
+            ],
+        }
+
+    @staticmethod
+    def get_admin_dashboard(admin: User):
         today = timezone.localdate()
 
         clients_current = User.objects.filter(
