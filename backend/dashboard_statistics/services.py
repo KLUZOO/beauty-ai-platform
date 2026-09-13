@@ -1,8 +1,9 @@
 from appointments.models import Appointment
+from beauty_service.models import Service
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Sum
+from django.db.models import Avg, Count, Sum
 from django.utils import timezone
-from payments.models import Payment, PaymentStatus
+from payments.models import Payment, PaymentMethod, PaymentStatus
 from users.models import Master, MasterStatus
 
 User = get_user_model()
@@ -10,23 +11,125 @@ User = get_user_model()
 
 class StatisticsService:
     @staticmethod
-    def get_admin_analytics(admin: User):
+    def get_admin_analytics(admin: User, period: int):
+        date_from = timezone.localdate() - timezone.timedelta(days=period)
+        date_to = timezone.localdate()
+        total_revenue = (
+            Payment.objects.filter(
+                payment_status=PaymentStatus.COMPLETED,
+                payment_date__date__gte=date_from,
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+        booking_count = Appointment.objects.filter(
+            status__in=["confirmed", "completed"],
+            start__date__gte=date_from,
+        ).count()
+        avg_booking_value = total_revenue / booking_count if booking_count > 0 else 0
+        cancellation_rate = (
+            Appointment.objects.filter(
+                status="cancelled",
+                start__date__gte=date_from,
+            ).count()
+            / booking_count
+            * 100
+            if booking_count > 0
+            else 0
+        )
+        no_show_rate = (
+            Appointment.objects.filter(
+                status="No show",
+                start__date__gte=date_from,
+            ).count()
+            / booking_count
+            * 100
+            if booking_count > 0
+            else 0
+        )
+        clients = Appointment.objects.filter(
+            status__in=["confirmed", "completed"],
+            start__date__gte=date_from,
+        ).values("client")
+        total_clients = clients.distinct().count()
+        repeat_clients = (
+            clients.annotate(client_count=Count("client"))
+            .filter(client_count__gt=1)
+            .count()
+        )
+        repeat_clients_rate = (
+            repeat_clients / total_clients * 100 if total_clients > 0 else 0
+        )
+        booking_status = {
+            "pending": Appointment.objects.filter(
+                status="pending",
+                start__date__gte=date_from,
+            ).count(),
+            "completed": Appointment.objects.filter(
+                status="completed",
+                start__date__gte=date_from,
+            ).count(),
+            "confirmed": Appointment.objects.filter(
+                status="confirmed",
+                start__date__gte=date_from,
+            ).count(),
+            "cancelled": Appointment.objects.filter(
+                status="cancelled",
+                start__date__gte=date_from,
+            ).count(),
+            "no_show": Appointment.objects.filter(
+                status="no_show",
+                start__date__gte=date_from,
+            ).count(),
+        }
+        payment_methods = {
+            PaymentMethod.CARD: Payment.objects.filter(
+                payment_method=PaymentMethod.CARD,
+                payment_date__date__gte=date_from,
+            ).count(),
+            PaymentMethod.CASH: Payment.objects.filter(
+                payment_method=PaymentMethod.CASH,
+                payment_date__date__gte=date_from,
+            ).count(),
+            PaymentMethod.APPLE_PAY: Payment.objects.filter(
+                payment_method=PaymentMethod.APPLE_PAY,
+                payment_date__date__gte=date_from,
+            ).count(),
+            PaymentMethod.GOOGLE_PAY: Payment.objects.filter(
+                payment_method=PaymentMethod.GOOGLE_PAY,
+                payment_date__date__gte=date_from,
+            ).count(),
+        }
+        popular_services = {
+            service.name: service.bookings
+            for service in Service.objects.filter(
+                appointments__start__date__gte=date_from
+            )
+            .annotate(bookings=Sum("appointments__payments__amount"))
+            .distinct()
+        }
         return {
-            "period": "30d",
-            "date_from": "2026-08-11",
-            "date_to": "2026-09-09",
+            "period": f"{period}d",
+            "date_from": date_from.isoformat(),
+            "date_to": date_to.isoformat(),
             "kpi": {
-                "total_revenue": 125000,
-                "avg_booking_value": 820,
-                "cancellation_rate": 12.4,
-                "no_show_rate": 6.1,
-                "repeat_clients_rate": 48.2,
+                "total_revenue": total_revenue,
+                "avg_booking_value": avg_booking_value,
+                "cancellation_rate": cancellation_rate,
+                "no_show_rate": no_show_rate,
+                "repeat_clients_rate": repeat_clients_rate,
             },
             "revenue_trend": [{"date": "2026-08-11", "value": 4200}],
             "revenue_by_period": [{"label": "11 Aug", "value": 4200}],
-            "payment_methods": [{"label": "Card", "value": 120}],
-            "booking_status": [{"label": "completed", "value": 210}],
-            "popular_services": [{"label": "Манікюр", "value": 95}],
+            "payment_methods": [
+                {"label": key, "value": value} for key, value in payment_methods.items()
+            ],
+            "booking_status": [
+                {"label": key, "value": value} for key, value in booking_status.items()
+            ],
+            "popular_services": [
+                {"label": key, "value": value}
+                for key, value in popular_services.items()
+            ],
             "revenue_by_city": [{"label": "Київ", "value": 54000}],
             "client_mix": [
                 {"label": "New", "value": 80},
