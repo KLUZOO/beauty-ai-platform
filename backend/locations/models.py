@@ -14,6 +14,12 @@ class Location(models.Model):
         max_length=100,
     )
 
+    district = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+    )
+
     address = models.CharField(
         max_length=255,
         null=True,
