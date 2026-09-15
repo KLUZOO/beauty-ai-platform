@@ -91,30 +91,21 @@ class CachedSalon(AbstractSalon):
 
 
 class SalonWorkingHours(models.Model):
-    MONDAY = 0
-    TUESDAY = 1
-    WEDNESDAY = 2
-    THURSDAY = 3
-    FRIDAY = 4
-    SATURDAY = 5
-    SUNDAY = 6
-
-    WEEKDAY_CHOICES = [
-        (MONDAY, "Monday"),
-        (TUESDAY, "Tuesday"),
-        (WEDNESDAY, "Wednesday"),
-        (THURSDAY, "Thursday"),
-        (FRIDAY, "Friday"),
-        (SATURDAY, "Saturday"),
-        (SUNDAY, "Sunday"),
-    ]
+    class Weekday(models.IntegerChoices):
+        MONDAY = 0, "Monday"
+        TUESDAY = 1, "Tuesday"
+        WEDNESDAY = 2, "Wednesday"
+        THURSDAY = 3, "Thursday"
+        FRIDAY = 4, "Friday"
+        SATURDAY = 5, "Saturday"
+        SUNDAY = 6, "Sunday"
 
     salon = models.ForeignKey(
         Salon,
         related_name="working_hours",
         on_delete=models.CASCADE,
     )
-    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY_CHOICES)
+    weekday = models.PositiveSmallIntegerField(choices=Weekday.choices)
     is_closed = models.BooleanField(default=False)
     opening_time = models.TimeField(null=True, blank=True)
     closing_time = models.TimeField(null=True, blank=True)

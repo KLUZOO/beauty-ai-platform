@@ -52,7 +52,7 @@ urlpatterns = [
         include("referral_events.urls", namespace="referral_events"),
     ),
     path(
-        "api/dashboard-statistics/",
+        "api/admin/",
         include("dashboard_statistics.urls", namespace="dashboard_statistics"),
     ),
     path("api/services/", include("beauty_service.urls", namespace="services")),

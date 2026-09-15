@@ -1,6 +1,7 @@
 from typing import Any, ClassVar
 
 from appointments.models import Appointment
+from attr import field
 from beauty_service.models import Service
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
@@ -117,12 +118,32 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 # HELPER / NESTED SERIALIZERS
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = (
+            "id",
+            "country",
+            "city_name",
+            "address",
+            "region",
+            "coordinates",
+            "timezone",
+            "city_tier",
+        )
+
+
 class SalonShortSerializer(serializers.ModelSerializer):
+    location = LocationSerializer(read_only=True)
+
     class Meta:
         model = Salon
         fields = (
             "id",
             "name",
+            "location",
         )
 
 
@@ -321,6 +342,22 @@ class MasterProfileSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class WorkplaceSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = (
+            "id",
+            "country",
+            "city_name",
+            "district",
+            "address",
+            "region",
+            "coordinates",
+            "timezone",
+            "city_tier",
+        )
+
+
 class MasterListSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
@@ -328,6 +365,7 @@ class MasterListSerializer(serializers.ModelSerializer):
     average_rating = serializers.FloatField(source="rating", read_only=True)
     salons = SalonShortSerializer(many=True, read_only=True)
     services = ServiceSerializer(many=True, read_only=True)
+    workplace = WorkplaceSerializers(read_only=True)
 
     class Meta:
         model = Master
@@ -338,6 +376,7 @@ class MasterListSerializer(serializers.ModelSerializer):
             "photo",
             "average_rating",
             "years_of_experience",
+            "workplace",
             "salons",
             "services",
         )

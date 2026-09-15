@@ -1,11 +1,7 @@
 from typing import Sequence
 
-from django.db.models import (
-    Avg,
-    Count,
-    Q,
-    QuerySet
-)
+from django.db.models import Avg, Count, Q, QuerySet
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
@@ -14,23 +10,12 @@ from drf_spectacular.utils import (
 )
 from rest_framework import generics
 from rest_framework.filters import OrderingFilter
-from django_filters.rest_framework import DjangoFilterBackend
-
 from users.models import MasterStatus
 
 from .filters import SalonFilter
-
-from .models import (
-    Salon,
-    SalonStatus
-)
-
+from .models import Salon, SalonStatus
 from .permissions import IsAdminOrReadOnlyAll
-
-from .serializers import (
-    SalonListSerializer,
-    SalonSerializer
-)
+from .serializers import SalonListSerializer, SalonSerializer
 
 
 @extend_schema_view(
@@ -67,6 +52,7 @@ class SalonListCreateView(generics.ListCreateAPIView):
     queryset = Salon.objects.prefetch_related("masters")
     serializer_class = SalonSerializer
     permission_classes = [IsAdminOrReadOnlyAll]
+
 
 @extend_schema_view(
     get=extend_schema(
@@ -171,6 +157,7 @@ class SalonOrderingFilter(OrderingFilter):
                 result.append(f"-{mapped}" if desc else mapped)
 
         return result
+
 
 @extend_schema(
     summary="List active salons with details and metrics",

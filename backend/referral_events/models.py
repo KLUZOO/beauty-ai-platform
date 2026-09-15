@@ -67,6 +67,8 @@ class ReferralProgram(models.Model):
         EARNED = "earned", "Earned"
         PAID = "paid", "Paid"
         CANCELLED = "cancelled", "Cancelled"
+        REWARDED = "rewarded", "Rewarded"
+        EXPIRED = "expired", "Expired"
 
     referral_id = models.CharField(
         max_length=64,
