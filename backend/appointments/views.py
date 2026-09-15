@@ -944,8 +944,26 @@ class CreateAppointmentView(generics.CreateAPIView):
         except (MasterNotFoundError, ServiceNotFoundError, InvalidDateError) as e:
             return Response({"detail": str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
 
-        req_start_str = data["appointment_time"].strftime("%H:%M")
-        is_slot_available = any(s["start"] == req_start_str for s in available_slots)
+        req_time_str = data["appointment_time"].strftime("%H:%M")
+
+        def extract_time_str(slot):
+            raw = slot.get("start_time") or slot.get("start")
+            if not raw:
+                return None
+            if isinstance(raw, str):
+                # Processing ISO string '2026-09-16T08:00:00+00:00' -> extracting HH:MM from HH:MM:SS
+                if "T" in raw:
+                    time_part = raw.split("T")[1]
+                    return time_part[:5]  # We get "08:00"
+                return raw[:5]
+            if hasattr(raw, "strftime"):
+                return raw.strftime("%H:%M")
+            return str(raw)[:5]
+
+        is_slot_available = any(
+            extract_time_str(s) == req_time_str
+            for s in available_slots
+        )
 
         if not is_slot_available:
             return Response(
@@ -970,7 +988,7 @@ class CreateAppointmentView(generics.CreateAPIView):
             appointment = Appointment.objects.create(
                 client=request.user,
                 master=master,
-                salon=master.salon,
+                salon=master.salons.first(),
                 service=service,
                 start=start_dt,
                 end=end_dt,
