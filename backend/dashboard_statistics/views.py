@@ -1,10 +1,13 @@
-from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema
+)
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.permissions import IsMaster
 
-from dashboard_statistics.permissions import IsAdmin
 from dashboard_statistics.serializers import (
     AdminAnalyticsSerializer,
     AdminDashboardSerializer,
@@ -62,13 +65,13 @@ class AdminAnalyticsView(APIView):
             period = int(request.query_params.get("period", "30"))
         except (ValueError, TypeError):
             return Response(
-                {"detail": "period must be an integer"},
+                {"detail": "Параметр period повинен бути цілим числом."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if period <= 0:
             return Response(
-                {"detail": "period must be greater than 0"},
+                {"detail": "Параметр period повинен бути більшим за 0."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
