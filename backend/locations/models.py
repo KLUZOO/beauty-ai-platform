@@ -60,4 +60,12 @@ class Location(models.Model):
         )
 
     def __str__(self) -> str:
-        return f"{self.city_name}, {self.country}"
+        parts = [
+            self.city_name,
+            self.district,
+            self.region,
+            self.address,
+            self.country,
+        ]
+
+        return ", ".join(part for part in parts if part)
