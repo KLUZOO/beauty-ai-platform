@@ -643,12 +643,24 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
             else:
                 appointment = serializer.save()
 
+            # Fetching related objects to build a complete context
+            appointment = Appointment.objects.select_related(
+                "client", "master__user", "salon", "service"
+            ).get(pk=appointment.pk)
+
             # Mapping status to required Event Types
             event_type_map = {
                 "confirmed": "CONFIRMED",
                 "cancelled": "CANCELLED",
                 "completed": "COMPLETED",
             }
+
+            customer_name = (
+                appointment.client.get_full_name()
+                if hasattr(appointment.client, "get_full_name")
+                else appointment.client.email
+            )
+            master_name = appointment.master.user.get_full_name() or appointment.master.user.email
 
             if new_status in event_type_map:
                 payload = {
@@ -657,34 +669,46 @@ class MasterUpdateAppointmentStatusView(generics.UpdateAPIView):
                     "master_id": appointment.master_id,
                     "salon_id": appointment.salon_id,
                     "service_id": appointment.service_id,
+                    "customer_name": customer_name,
+                    "salon_name": appointment.salon.name,
+                    "master_name": master_name,
+                    "service_name": appointment.service.name,
                     "appointment_date": timezone.localtime(appointment.start).date().isoformat(),
                     "appointment_time": timezone.localtime(appointment.start).strftime("%H:%M"),
+                    "duration": f"{appointment.service.duration} хв" if hasattr(appointment.service,
+                                                                                "duration") else "",
+                    "price": str(appointment.service.price) if hasattr(appointment.service, "price") else "",
+                    "currency": "UAH",
+                    "recipient_email": appointment.client.email,
                     "appointment_status": appointment.status,
                     "event_type": event_type_map[new_status],
                     "timestamp": timezone.now().isoformat(),
                 }
 
                 # Executed strictly after successful database commit
-                db_transaction.on_commit(lambda: send_appointment_event_task.delay(payload))
+                db_transaction.on_commit(lambda p=payload: send_appointment_event_task.delay(p))
 
             # Legacy email notification registered within transaction context
+            context = {
+                "customer_name": customer_name,
+                "salon_name": appointment.salon.name,
+                "master_name": master_name,
+                "service_name": appointment.service.name,
+                "appointment_date": timezone.localtime(appointment.start).date().isoformat(),
+                "appointment_time": timezone.localtime(appointment.start).strftime("%H:%M"),
+                "duration": f"{appointment.service.duration} хв" if hasattr(appointment.service, "duration") else "",
+                "price": str(appointment.service.price) if hasattr(appointment.service, "price") else "",
+                "currency": "UAH",
+                "booking_status": appointment.get_status_display(),
+                "notification_message": "Статус вашого запису оновлено на '%s'."
+                                        % appointment.get_status_display(),
+            }
+
             db_transaction.on_commit(
-                lambda: send_email_task.delay(
+                lambda c=context: send_email_task.delay(
                     recipient=appointment.client.email,
                     subject="Оновлення статусу вашого запису",
-                    context={
-                        "customer_name": appointment.client.get_full_name()
-                                         or appointment.client.email,
-                        "booking_status": appointment.get_status_display(),
-                        "salon_name": appointment.salon.name,
-                        "master_name": appointment.master.user.get_full_name()
-                                       or appointment.master.user.email,
-                        "service_name": appointment.service.name,
-                        "booking_date": timezone.localtime(appointment.start).date().isoformat(),
-                        "booking_time": timezone.localtime(appointment.start).strftime("%H:%M"),
-                        "notification_message": "Статус вашого запису оновлено на '%s'."
-                                                % appointment.get_status_display(),
-                    },
+                    context=c,
                 )
             )
 
@@ -875,17 +899,17 @@ class AvailableTimeSlotsView(APIView):
         try:
             slots = slot_service.generate()
         except MasterNotFoundError:
-            return Response({"detail": "Master not found."}, status=http_status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Майстра не знайдено."}, status=http_status.HTTP_404_NOT_FOUND)
         except ServiceNotFoundError:
-            return Response({"detail": "Service not found."}, status=http_status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Послугу не знайдено."}, status=http_status.HTTP_404_NOT_FOUND)
         except ServiceNotAssignedError:
             return Response(
-                {"detail": "The selected service is not assigned to this master."},
+                {"detail": "Обрана послуга не надається цим майстром."},
                 status=http_status.HTTP_400_BAD_REQUEST,
             )
         except InvalidDateError:
             return Response(
-                {"detail": "Appointment date cannot be in the past."},
+                {"detail": "Дата запису не може бути у минулому."},
                 status=http_status.HTTP_400_BAD_REQUEST,
             )
 
@@ -917,10 +941,12 @@ class CreateAppointmentView(generics.CreateAPIView):
             return Response({"detail": "Послугу не знайдено."}, status=http_status.HTTP_404_NOT_FOUND)
 
         tz = timezone.get_current_timezone()
-        start_dt = timezone.make_aware(
-            datetime.combine(data["appointment_date"], data["appointment_time"]),
-            tz
-        )
+        dt_combined = datetime.combine(data["appointment_date"], data["appointment_time"])
+        if timezone.is_naive(dt_combined):
+            start_dt = timezone.make_aware(dt_combined, tz)
+        else:
+            start_dt = dt_combined
+
         end_dt = start_dt + timedelta(minutes=service.duration_minutes)
 
         if start_dt <= timezone.now():
@@ -944,8 +970,26 @@ class CreateAppointmentView(generics.CreateAPIView):
         except (MasterNotFoundError, ServiceNotFoundError, InvalidDateError) as e:
             return Response({"detail": str(e)}, status=http_status.HTTP_400_BAD_REQUEST)
 
-        req_start_str = data["appointment_time"].strftime("%H:%M")
-        is_slot_available = any(s["start"] == req_start_str for s in available_slots)
+        req_time_str = data["appointment_time"].strftime("%H:%M")
+
+        def extract_time_str(slot):
+            raw = slot.get("start_time") or slot.get("start")
+            if not raw:
+                return None
+            if isinstance(raw, str):
+                # Processing ISO string '2026-09-16T08:00:00+00:00' -> extracting HH:MM from HH:MM:SS
+                if "T" in raw:
+                    time_part = raw.split("T")[1]
+                    return time_part[:5]  # We get "08:00"
+                return raw[:5]
+            if hasattr(raw, "strftime"):
+                return raw.strftime("%H:%M")
+            return str(raw)[:5]
+
+        is_slot_available = any(
+            extract_time_str(s) == req_time_str
+            for s in available_slots
+        )
 
         if not is_slot_available:
             return Response(
@@ -970,12 +1014,30 @@ class CreateAppointmentView(generics.CreateAPIView):
             appointment = Appointment.objects.create(
                 client=request.user,
                 master=master,
-                salon=master.salon,
+                salon=master.salons.first(),
                 service=service,
                 start=start_dt,
                 end=end_dt,
                 notes=data.get("notes", ""),
                 status="pending"
+            )
+
+            # Generating extended text data
+            customer_name = (
+                request.user.get_full_name()
+                if hasattr(request.user, "get_full_name") and request.user.get_full_name()
+                else request.user.email
+            )
+            master_name = (
+                master.user.get_full_name()
+                if hasattr(master, "user") and master.user.get_full_name()
+                else (master.user.email if hasattr(master, "user") else str(master))
+            )
+            salon_name = appointment.salon.name if appointment.salon else ""
+            duration_val = (
+                f"{service.duration_minutes} хв"
+                if hasattr(service, "duration_minutes")
+                else (f"{service.duration} хв" if hasattr(service, "duration") else "")
             )
 
             # Notification payload for BE-BOOKING-07
@@ -985,15 +1047,23 @@ class CreateAppointmentView(generics.CreateAPIView):
                 "master_id": appointment.master_id,
                 "salon_id": appointment.salon_id,
                 "service_id": appointment.service_id,
+                "customer_name": customer_name,
+                "salon_name": salon_name,
+                "master_name": master_name,
+                "service_name": service.name,
                 "appointment_date": timezone.localtime(appointment.start).date().isoformat(),
                 "appointment_time": timezone.localtime(appointment.start).strftime("%H:%M"),
+                "duration": duration_val,
+                "price": str(service.price) if hasattr(service, "price") else "",
+                "currency": "UAH",
+                "recipient_email": request.user.email,
                 "appointment_status": appointment.status,
                 "event_type": "CREATED",
                 "timestamp": timezone.now().isoformat(),
             }
 
             # Published ONLY after the transaction is successfully committed
-            db_transaction.on_commit(lambda: send_appointment_event_task.delay(payload))
+            db_transaction.on_commit(lambda p=payload: send_appointment_event_task.delay(p))
 
         response_serializer = AppointmentSerializer(appointment)
         return Response(response_serializer.data, status=http_status.HTTP_201_CREATED)

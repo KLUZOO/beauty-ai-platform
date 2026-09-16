@@ -1,12 +1,30 @@
 from beauty_service.models import Service
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.db.models import Avg, Count, F, Prefetch, Q, QuerySet, Sum, Value
+
+from django.db.models import (
+    Avg,
+    Count,
+    F,
+    Prefetch,
+    Q,
+    QuerySet,
+    Sum,
+    Value
+)
 from django.db.models.functions import Concat
+
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+
+from django.shortcuts import (
+    get_object_or_404,
+    render
+)
 from django.views import View
+
 from django_filters.rest_framework import DjangoFilterBackend
+
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
@@ -14,17 +32,37 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
-from rest_framework import generics, mixins, serializers, status, viewsets
+from rest_framework import (
+    generics,
+    mixins,
+    serializers,
+    status,
+    viewsets
+)
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.permissions import (
+    AllowAny,
+    IsAdminUser,
+    IsAuthenticated
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from salons.models import Salon, SalonStatus
+
+from salons.models import (
+    Salon,
+    SalonStatus
+)
 
 from users.filters import UsersFilter
-from users.models import DayOff, FavoriteMaster, Master, MasterStatus, WorkingSchedule
+from users.models import (
+    DayOff,
+    FavoriteMaster,
+    Master,
+    MasterStatus,
+    WorkingSchedule
+)
 from users.permissions import IsMaster
 from users.serializers import (
     ChangePasswordSerializer,
@@ -468,7 +506,7 @@ class ChangePasswordView(generics.GenericAPIView):
     def post(self, request) -> Response:
         if not request.user.has_usable_password():
             raise ValidationError(
-                {"detail": "Password has not been set. Use the set-password endpoint."}
+                {"detail": "Пароль ще не встановлено. Скористайтеся ендпоінтом change-password."}
             )
 
         serializer = self.get_serializer(data=request.data)
@@ -498,8 +536,8 @@ class SetPasswordView(generics.GenericAPIView):
             raise ValidationError(
                 {
                     "detail": (
-                        "Password has already been set. "
-                        "Use the change-password endpoint."
+                        "Пароль уже встановлено. "
+                        "Скористайтеся ендпоінтом change-password."
                     )
                 }
             )
@@ -535,7 +573,7 @@ class VerifyEmailView(APIView):
         UserAuthService.verify_email(uidb64, token)
 
         return Response(
-            {"detail": "Email verified successfully."},
+            {"detail": "Email успішно підтверджено."},
             status=status.HTTP_200_OK,
         )
 
@@ -696,7 +734,7 @@ class FavoriteMasterView(APIView):
 
         if not created:
             return Response(
-                {"detail": "Master is already in favorites."},
+                {"detail": "Майстер уже знаходиться в обраному."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

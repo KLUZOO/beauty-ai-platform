@@ -46,12 +46,26 @@ def send_appointment_event_task(self, payload: dict) -> None:
         )
 
         context = {
-            "event_type": payload.get("event_type"),
-            "appointment_id": payload.get("appointment_id"),
-            "booking_date": payload.get("appointment_date"),
-            "booking_time": payload.get("appointment_time"),
-            "status": payload.get("appointment_status"),
+            "customer_name": payload.get("customer_name"),
+            "salon_name": payload.get("salon_name"),
+            "master_name": payload.get("master_name"),
+            "service_name": payload.get("service_name"),
+            "appointment_date": payload.get("appointment_date"),
+            "appointment_time": payload.get("appointment_time"),
+            "duration": payload.get("duration"),
+            "price": payload.get("price"),
+            "currency": payload.get("currency", "UAH"),
+            "appointment_url": payload.get("appointment_url", "#"),
         }
+
+        recipient = payload.get("recipient_email")
+        if recipient:
+            EmailService.send_email(
+                recipient=recipient,
+                subject="Appointment Confirmation",
+                context=context,
+                template_name="emails/notification.html",
+            )
 
         logger.info(f"Notification payload processed successfully: {payload}")
 
