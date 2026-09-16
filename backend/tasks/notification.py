@@ -45,9 +45,12 @@ def send_appointment_event_task(self, payload: dict) -> None:
             f"for appointment {payload.get('appointment_id')}"
         )
 
+        # Ensure that salon_name is None if an empty string or None is passed
+        salon_name = payload.get("salon_name")
+
         context = {
             "customer_name": payload.get("customer_name"),
-            "salon_name": payload.get("salon_name"),
+            "salon_name": salon_name if salon_name else None,
             "master_name": payload.get("master_name"),
             "service_name": payload.get("service_name"),
             "appointment_date": payload.get("appointment_date"),

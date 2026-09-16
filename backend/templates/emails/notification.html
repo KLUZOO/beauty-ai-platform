@@ -17,19 +17,19 @@
     .description{font-size:14px;color:#666;margin:0 0 24px}
     .details-header{text-align:left;font-weight:bold;border-top:1px solid #eee;padding-top:20px;margin-bottom:8px}
     .details {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-}
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
     .details td {
-    padding: 12px 0;
-    border-bottom: 1px solid #f5f5f5;
-    font-size: 14px;
-    text-align: left;
-}
-.details td.value {
-    text-align: right;
-}
+      padding: 12px 0;
+      border-bottom: 1px solid #f5f5f5;
+      font-size: 14px;
+      text-align: left;
+    }
+    .details td.value {
+      text-align: right;
+    }
     .label{color:#777}
     .value{text-align:right;font-weight:500}
     .icon{display:inline-block;width:30px;height:30px;line-height:30px;text-align:center;background:#f7f5fa;border-radius:8px;margin-right:10px}
@@ -64,10 +64,12 @@
       <div class="details-header">Appointment Details</div>
 
       <table class="details">
+        {% if salon_name %}
         <tr>
           <td class="label"><span class="icon">🏪</span>Salon</td>
           <td class="value">{{ salon_name }}</td>
         </tr>
+        {% endif %}
         <tr>
           <td class="label"><span class="icon">👤</span>Master</td>
           <td class="value">{{ master_name }}</td>
