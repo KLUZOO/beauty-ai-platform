@@ -132,6 +132,7 @@ class LocationSerializer(serializers.ModelSerializer):
             "coordinates",
             "timezone",
             "city_tier",
+            "district",
         )
 
 

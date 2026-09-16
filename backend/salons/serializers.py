@@ -16,6 +16,7 @@ class LocationSerializer(serializers.ModelSerializer):
             "coordinates",
             "timezone",
             "city_tier",
+            "district",
         )
         read_only_fields = ("id",)
 
