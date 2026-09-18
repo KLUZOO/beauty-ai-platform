@@ -28,10 +28,8 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class MasterReviewSerializer(serializers.ModelSerializer):
-    client_name = serializers.CharField(
-        source="appointment.client.get_full_name",
-        read_only=True,
-    )
+    client_name = serializers.SerializerMethodField()
+    appointment_date = serializers.SerializerMethodField()
 
     client_profile_photo = serializers.ImageField(
         source="appointment.client.photo",
@@ -40,11 +38,6 @@ class MasterReviewSerializer(serializers.ModelSerializer):
 
     service_name = serializers.CharField(
         source="appointment.service.name",
-        read_only=True,
-    )
-
-    appointment_date = serializers.DateField(
-        source="appointment.start.date",
         read_only=True,
     )
 
@@ -60,6 +53,12 @@ class MasterReviewSerializer(serializers.ModelSerializer):
             "appointment_date",
             "created_at",
         )
+
+    def get_client_name(self, obj):
+        return obj.appointment.client.get_full_name()
+
+    def get_appointment_date(self, obj):
+        return obj.appointment.start.date()
 
 
 class AppointmentReviewSerializer(serializers.ModelSerializer):
