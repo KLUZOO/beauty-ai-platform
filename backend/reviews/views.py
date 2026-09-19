@@ -1,10 +1,9 @@
 from appointments.models import Appointment
-from django.db.models import QuerySet
+from django.db.models import Avg, QuerySet
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiExample,
     OpenApiParameter,
     OpenApiResponse,
     extend_schema,
@@ -12,6 +11,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import generics, mixins, permissions, serializers
 from rest_framework.filters import OrderingFilter
+from rest_framework.response import Response
 from users.permissions import IsMaster
 
 from reviews.filters import MasterReviewFilter, ReviewFilter
@@ -210,16 +210,36 @@ class MasterReviewQuerysetMixin:
 class MasterReviewListView(MasterReviewQuerysetMixin, generics.ListAPIView):
     serializer_class = MasterReviewSerializer
     permission_classes = (IsMaster,)
+
     filter_backends = (
         DjangoFilterBackend,
         OrderingFilter,
     )
     filterset_class = MasterReviewFilter
+
     ordering_fields = (
         "created_at",
         "rating",
     )
     ordering = ("-created_at",)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        total_reviews = queryset.count()
+        average_rating = queryset.aggregate(average_rating=Avg("rating"))[
+            "average_rating"
+        ]
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(
+            {
+                "reviews": serializer.data,
+                "average_rating": average_rating,
+                "total_reviews": total_reviews,
+            }
+        )
 
 
 @extend_schema(
