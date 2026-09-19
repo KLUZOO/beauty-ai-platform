@@ -61,7 +61,7 @@ class ReviewFilter(django_filters.FilterSet):
 
     class Meta:
         model = Review
-        fields = [
+        fields = (
             "date_from",
             "date_to",
             "rating_from",
@@ -69,4 +69,4 @@ class ReviewFilter(django_filters.FilterSet):
             "client",
             "master",
             "service",
-        ]
+        )
