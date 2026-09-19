@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
+    OpenApiExample,
     OpenApiParameter,
     OpenApiResponse,
     extend_schema,
@@ -13,7 +14,7 @@ from rest_framework import generics, mixins, permissions, serializers
 from rest_framework.filters import OrderingFilter
 from users.permissions import IsMaster
 
-from reviews.filters import MasterReviewFilter
+from reviews.filters import MasterReviewFilter, ReviewFilter
 
 from .models import Review
 from .serializers import (
@@ -25,33 +26,98 @@ from .serializers import (
 
 @extend_schema_view(
     get=extend_schema(
-        summary="List all reviews",
-        responses={200: ReviewSerializer(many=True)},
+        summary="List reviews",
+        description=(
+            "Returns a list of reviews.\n\n"
+            "This endpoint is publicly available and does not require authentication. "
+            "Reviews can be filtered by date, rating, client, master, and service."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="date_from",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Return reviews created on or after this date and time.",
+            ),
+            OpenApiParameter(
+                name="date_to",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Return reviews created on or before this date and time.",
+            ),
+            OpenApiParameter(
+                name="rating_from",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Minimum review rating.",
+            ),
+            OpenApiParameter(
+                name="rating_to",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Maximum review rating.",
+            ),
+            OpenApiParameter(
+                name="client",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Filter reviews by client ID.",
+            ),
+            OpenApiParameter(
+                name="master",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Filter reviews by master ID.",
+            ),
+            OpenApiParameter(
+                name="service",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Filter reviews by service ID.",
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=ReviewSerializer(many=True),
+                description="List of reviews.",
+            ),
+        },
     ),
     post=extend_schema(
         summary="Create a review",
+        description=(
+            "Creates a review for a completed appointment.\n\n"
+            "The authenticated user can create a review only for their own appointment. "
+            "The appointment must have `completed` status.\n\n"
+            "`client`, `master`, `service`, and `created_at` are determined "
+            "automatically and must not be provided."
+        ),
+        request=ReviewSerializer,
         responses={
-            201: ReviewSerializer,
+            201: OpenApiResponse(
+                response=ReviewSerializer,
+                description="Review successfully created.",
+            ),
             400: OpenApiResponse(
-                description="Validation error (e.g., trying to review someone else's or uncompleted appointment)"
+                description=(
+                    "Validation error. "
+                    "The appointment must belong to the authenticated user, "
+                    "must have `completed` status, and the rating must be between 1 and 5."
+                ),
             ),
             401: OpenApiResponse(
-                description="Authentication credentials were not provided"
+                description="Authentication credentials were not provided.",
             ),
         },
     ),
 )
 class ReviewListCreateView(generics.ListCreateAPIView):
-    """
-    GET /api/reviews/ — list of all reviews, available to anyone (even without authorization)
-    POST /api/reviews/ — leave a review for your completed booking, authorization required
-
-    Request body for POST: {"appointment": 5, "rating": 4, "comment": "..."}
-    client and master are determined automatically from appointment, they do not need to be passed.
-    """
-
-    queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = ReviewFilter
+
+    def get_queryset(self):
+        return Review.objects.all()
 
     def get_permissions(self) -> list:
         if self.request.method == "POST":

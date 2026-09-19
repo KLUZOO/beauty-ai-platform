@@ -30,3 +30,43 @@ class MasterReviewFilter(django_filters.FilterSet):
     class Meta:
         model = Review
         fields = ("rating", "service", "date_from", "date_to")
+
+
+class ReviewFilter(django_filters.FilterSet):
+    date_from = django_filters.DateTimeFilter(
+        field_name="created_at",
+        lookup_expr="gte",
+    )
+    date_to = django_filters.DateTimeFilter(
+        field_name="created_at",
+        lookup_expr="lte",
+    )
+    rating_from = django_filters.NumberFilter(
+        field_name="rating",
+        lookup_expr="gte",
+    )
+    rating_to = django_filters.NumberFilter(
+        field_name="rating",
+        lookup_expr="lte",
+    )
+    client = django_filters.NumberFilter(
+        field_name="client_id",
+    )
+    master = django_filters.NumberFilter(
+        field_name="appointment__master_id",
+    )
+    service = django_filters.NumberFilter(
+        field_name="appointment__service_id",
+    )
+
+    class Meta:
+        model = Review
+        fields = [
+            "date_from",
+            "date_to",
+            "rating_from",
+            "rating_to",
+            "client",
+            "master",
+            "service",
+        ]

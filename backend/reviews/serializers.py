@@ -1,6 +1,30 @@
+from beauty_service.models import Service
 from rest_framework import serializers
+from users.models import User
 
 from .models import Review
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "photo",
+        )
+
+
+class ServiceSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = (
+            "id",
+            "category",
+            "name",
+            "image",
+        )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -8,8 +32,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         source="appointment.master.id",
         read_only=True,
     )
-    client = serializers.IntegerField(
-        source="appointment.client.id",
+    client = ClientSerializer(read_only=True)
+    service = ServiceSerializers(
+        source="appointment.service",
         read_only=True,
     )
 
@@ -18,6 +43,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "appointment",
+            "service",
             "client",
             "master",
             "rating",
