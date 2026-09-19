@@ -20,6 +20,7 @@ from .models import Review
 from .serializers import (
     AppointmentReviewSerializer,
     MasterReviewSerializer,
+    MasterReviewsResponseSerializer,
     ReviewSerializer,
 )
 
@@ -200,7 +201,7 @@ class MasterReviewQuerysetMixin:
         ),
     ],
     responses={
-        200: MasterReviewSerializer(many=True),
+        200: MasterReviewsResponseSerializer,
         401: OpenApiResponse(
             description="Authentication credentials were not provided"
         ),

@@ -87,6 +87,12 @@ class MasterReviewSerializer(serializers.ModelSerializer):
         return obj.appointment.start.date()
 
 
+class MasterReviewsResponseSerializer(serializers.Serializer):
+    reviews = MasterReviewSerializer(many=True)
+    average_rating = serializers.FloatField()
+    total_reviews = serializers.IntegerField()
+
+
 class AppointmentReviewSerializer(serializers.ModelSerializer):
     master = serializers.IntegerField(source="appointment.master", read_only=True)
     client = serializers.IntegerField(source="appointment.client", read_only=True)
