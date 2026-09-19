@@ -35,7 +35,7 @@ from salons.models import Salon, SalonStatus
 
 from users.filters import UsersFilter
 from users.models import DayOff, FavoriteMaster, Master, MasterStatus, WorkingSchedule
-from users.permissions import IsMaster
+from users.permissions import IsAdmin, IsMaster
 from users.serializers import (
     ChangePasswordSerializer,
     DayOffSerializer,
@@ -44,6 +44,8 @@ from users.serializers import (
     MasterListSerializer,
     MasterProfileSerializer,
     MasterSerializer,
+    MasterStatusSerializer,
+    MasterStatusSerializers,
     SetPasswordSerializer,
     UserProfileSerializer,
     UserSerializer,
@@ -812,3 +814,80 @@ class FavoriteMasterView(APIView):
             {"is_favorite": is_favorite},
             status=status.HTTP_200_OK,
         )
+
+
+@extend_schema_view(
+    get=extend_schema(
+        summary="List masters by account status",
+        description=(
+            "Returns a list of all masters with their account status "
+            "and basic account information. "
+            "Masters are sorted by account status."
+        ),
+        responses={
+            200: OpenApiResponse(
+                response=MasterStatusSerializers(many=True),
+                description="List of masters.",
+            ),
+        },
+    ),
+)
+class MasterStatusListView(generics.ListAPIView):
+    queryset = Master.objects.all().order_by("-account_status")
+    serializer_class = MasterStatusSerializers
+    permission_classes = (IsAdmin,)
+
+
+@extend_schema_view(
+    get=extend_schema(
+        summary="Get master account status",
+        description="Returns the account status of a specific master.",
+        responses={
+            200: OpenApiResponse(
+                response=MasterStatusSerializer,
+                description="Master account status.",
+            ),
+            404: OpenApiResponse(
+                description="Master not found.",
+            ),
+        },
+    ),
+    patch=extend_schema(
+        summary="Update master account status",
+        description="Updates the account status of a specific master.",
+        request=MasterStatusSerializer,
+        responses={
+            200: OpenApiResponse(
+                response=MasterStatusSerializer,
+                description="Master account status successfully updated.",
+            ),
+            400: OpenApiResponse(
+                description="Validation error.",
+            ),
+            404: OpenApiResponse(
+                description="Master not found.",
+            ),
+        },
+    ),
+)
+class MasterStatusView(generics.GenericAPIView):
+    queryset = Master.objects.all()
+    serializer_class = MasterStatusSerializer
+    permission_classes = (IsAdmin,)
+
+    def get(self, request, *args, **kwargs):
+        master = self.get_object()
+        serializer = self.get_serializer(master)
+        return Response(serializer.data)
+
+    def patch(self, request, *args, **kwargs):
+        master = self.get_object()
+        serializer = self.get_serializer(
+            master,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)

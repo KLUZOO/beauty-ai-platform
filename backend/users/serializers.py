@@ -22,6 +22,67 @@ from users.services.auth_service import UserRegistrationService
 User = get_user_model()
 
 
+class MasterStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Master
+        fields = (
+            "id",
+            "account_status",
+        )
+        read_only_fields = ("id",)
+
+
+class MasterStatusSerializers(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email")
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
+    phone = PhoneNumberField(source="user.phone")
+
+    services = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Service.objects.all(),
+    )
+
+    is_staff = serializers.BooleanField(
+        source="user.is_staff",
+        read_only=True,
+    )
+    is_active = serializers.BooleanField(
+        source="user.is_active",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Master
+        fields = (
+            "id",
+            "email",
+            "services",
+            "is_staff",
+            "is_active",
+            "first_name",
+            "last_name",
+            "phone",
+            "specialization",
+            "bio",
+            "years_of_experience",
+            "account_status",
+        )
+        read_only_fields = (
+            "id",
+            "email",
+            "services",
+            "is_staff",
+            "is_active",
+            "first_name",
+            "last_name",
+            "phone",
+            "specialization",
+            "bio",
+            "years_of_experience",
+        )
+
+
 class MasterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     password = serializers.CharField(

@@ -20,6 +20,8 @@ from users.views import (
     ManageUserView,
     ManageWorkingScheduleView,
     MasterListView,
+    MasterStatusListView,
+    MasterStatusView,
     SetPasswordView,
     VerifyEmailView,
     WorkingScheduleListCreateView,
@@ -76,5 +78,15 @@ urlpatterns = [
         "favorite-masters/<int:master_id>/",
         FavoriteMasterView.as_view(),
         name="favorite-master",
+    ),
+    path(
+        "masters/status/",
+        MasterStatusListView.as_view(),
+        name="masters-status-list",
+    ),
+    path(
+        "masters/status/<int:pk>/",
+        MasterStatusView.as_view(),
+        name="master-satus",
     ),
 ] + router.urls
