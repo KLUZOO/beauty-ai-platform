@@ -6,6 +6,7 @@ from beauty_service.models import Service
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from locations.models import Location
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
@@ -22,36 +23,81 @@ User = get_user_model()
 
 
 class MasterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email")
+    password = serializers.CharField(
+        write_only=True,
+        min_length=5,
+    )
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
+    phone = PhoneNumberField(source="user.phone")
+
+    services = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Service.objects.all(),
+    )
+    bio = serializers.CharField(
+        allow_null=True,
+        required=False,
+    )
+    years_of_experience = serializers.IntegerField(
+        min_value=0,
+    )
+    specialization = serializers.CharField(
+        max_length=255,
+        allow_null=True,
+        required=False,
+    )
+
+    is_staff = serializers.BooleanField(
+        source="user.is_staff",
+        read_only=True,
+    )
+    is_active = serializers.BooleanField(
+        source="user.is_active",
+        read_only=True,
+    )
+
     class Meta:
-        model = User
+        model = Master
         fields = (
             "id",
             "email",
             "password",
+            "services",
             "is_staff",
             "is_active",
             "first_name",
             "last_name",
             "phone",
+            "specialization",
+            "bio",
+            "years_of_experience",
+            "account_status",
         )
-        read_only_fields = ("is_staff", "is_active")
-        extra_kwargs: ClassVar[dict[str, Any]] = {
-            "password": {"write_only": True, "min_length": 5}
-        }
+        read_only_fields = ("is_staff", "is_active", "account_status")
 
-    def create(self, validated_data: dict[str, Any]) -> Any:
-        return UserRegistrationService.register(validated_data)
+    def create(self, validated_data):
+        with transaction.atomic():
+            services = validated_data.pop("services", [])
 
-    # noinspection PyUnresolvedReferences
-    def update(self, instance: Any, validated_data: dict[str, Any]) -> Any:
-        """Update a user, securely set a new password if provided, and return it."""
-        password = validated_data.pop("password", None)
-        user = super().update(instance, validated_data)
-        if password:
-            user.set_password(password)
-            user.save()
+            user_data = validated_data.pop("user")
+            password = validated_data.pop("password")
 
-        return user
+            user = User.objects.create_user(
+                password=password,
+                is_active=False,
+                **user_data,
+            )
+
+            master = Master.objects.create(
+                user=user,
+                **validated_data,
+            )
+
+            master.services.set(services)
+
+            return master
 
 
 # USER MANAGEMENT SERIALIZERS

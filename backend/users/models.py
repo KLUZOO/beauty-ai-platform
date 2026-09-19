@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from locations.models import Location
 from phonenumber_field.modelfields import PhoneNumberField
+from reviews.models import Review
 
 from .managers import UserManager
 from .services.media_path import generate_upload_path
@@ -167,13 +168,20 @@ class Master(models.Model):
     @property
     def average_rating_property(self) -> float:
         """Calculate average rating, returning 0.0 if no reviews exist."""
-        avg = self.appointments.review.aggregate(average=Avg("rating"))["average"]
+        avg = Review.objects.filter(
+            appointment__master=self,
+        ).aggregate(
+            average=Avg("rating"),
+        )["average"]
+
         return round(avg, 2) if avg is not None else 0.0
 
     @property
     def total_reviews_property(self) -> int:
         """Return total number of reviews received by the master."""
-        return self.appointments.review.count()
+        return Review.objects.filter(
+            appointment__master=self,
+        ).count()
 
     @property
     def is_independent(self) -> bool:
