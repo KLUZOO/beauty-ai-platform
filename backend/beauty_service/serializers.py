@@ -14,6 +14,7 @@ class SalonServiceSerializer(serializers.ModelSerializer):
 class MasterServicesSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
+    average_rating = serializers.FloatField(source="average_rating_property")
 
     class Meta:
         model = Master
