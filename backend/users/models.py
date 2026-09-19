@@ -165,13 +165,13 @@ class Master(models.Model):
         return self.services.filter(is_active=True)
 
     @property
-    def average_rating(self) -> float:
+    def average_rating_property(self) -> float:
         """Calculate average rating, returning 0.0 if no reviews exist."""
         avg = self.appointments.review.aggregate(average=Avg("rating"))["average"]
         return round(avg, 2) if avg is not None else 0.0
 
     @property
-    def total_reviews(self) -> int:
+    def total_reviews_property(self) -> int:
         """Return total number of reviews received by the master."""
         return self.appointments.review.count()
 

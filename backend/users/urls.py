@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import (
 from users.views import (
     ChangePasswordView,
     ClientListView,
+    CreateMasterView,
     CreateUserView,
     DayOffViewSet,
     FavoriteMastersListView,
@@ -39,6 +40,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("register-master/", CreateMasterView.as_view(), name="create-master"),
     path("register/", CreateUserView.as_view(), name="create"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

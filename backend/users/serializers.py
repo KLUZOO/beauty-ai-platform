@@ -21,6 +21,39 @@ from users.services.auth_service import UserRegistrationService
 User = get_user_model()
 
 
+class MasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "email",
+            "password",
+            "is_staff",
+            "is_active",
+            "first_name",
+            "last_name",
+            "phone",
+        )
+        read_only_fields = ("is_staff", "is_active")
+        extra_kwargs: ClassVar[dict[str, Any]] = {
+            "password": {"write_only": True, "min_length": 5}
+        }
+
+    def create(self, validated_data: dict[str, Any]) -> Any:
+        return UserRegistrationService.register(validated_data)
+
+    # noinspection PyUnresolvedReferences
+    def update(self, instance: Any, validated_data: dict[str, Any]) -> Any:
+        """Update a user, securely set a new password if provided, and return it."""
+        password = validated_data.pop("password", None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+
+        return user
+
+
 # USER MANAGEMENT SERIALIZERS
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating basic user data."""
@@ -363,10 +396,11 @@ class MasterListSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
     photo = serializers.ImageField(source="user.photo")
-    average_rating = serializers.FloatField(source="rating", read_only=True)
+    average_rating = serializers.FloatField(read_only=True)
     salons = SalonShortSerializer(many=True, read_only=True)
     services = ServiceSerializer(many=True, read_only=True)
     workplace = WorkplaceSerializers(read_only=True)
+    total_reviews = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Master
@@ -376,6 +410,7 @@ class MasterListSerializer(serializers.ModelSerializer):
             "last_name",
             "photo",
             "average_rating",
+            "total_reviews",
             "years_of_experience",
             "workplace",
             "salons",

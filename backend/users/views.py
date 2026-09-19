@@ -1,8 +1,18 @@
 from beauty_service.models import Service
 from django.contrib.auth import get_user_model
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.db.models import Avg, Count, F, Prefetch, Q, QuerySet, Sum, Value
-from django.db.models.functions import Concat
+from django.db.models import (
+    Avg,
+    Count,
+    F,
+    FloatField,
+    Prefetch,
+    Q,
+    QuerySet,
+    Sum,
+    Value,
+)
+from django.db.models.functions import Coalesce, Concat
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
@@ -33,6 +43,7 @@ from users.serializers import (
     GoogleLoginSerializer,
     MasterListSerializer,
     MasterProfileSerializer,
+    MasterSerializer,
     SetPasswordSerializer,
     UserProfileSerializer,
     UserSerializer,
@@ -40,6 +51,10 @@ from users.serializers import (
     WorkingScheduleSerializer,
 )
 from users.services.auth_service import UserAuthService
+
+
+class CreateMasterView(generics.CreateAPIView):
+    serializer_class = MasterSerializer
 
 
 @extend_schema(
@@ -262,13 +277,13 @@ class MasterListView(generics.ListAPIView):
     filter_backends = (OrderingFilter,)
 
     ordering_fields = (
-        "rating",
+        "average_rating",
         "name",
         "years_of_experience",
         "popularity",
     )
 
-    ordering = ("-rating",)
+    ordering = ("-average_rating",)
 
     def get_queryset(self) -> QuerySet:
         return (
@@ -284,7 +299,11 @@ class MasterListView(generics.ListAPIView):
                 )
             )
             .annotate(
-                rating=Avg("appointments__review__rating"),
+                average_rating=Coalesce(
+                    Avg("appointments__review__rating"),
+                    Value(0.0),
+                    output_field=FloatField(),
+                ),
                 name=Concat(
                     "user__first_name",
                     Value(" "),
@@ -293,6 +312,10 @@ class MasterListView(generics.ListAPIView):
                 popularity=Count(
                     "appointments",
                     filter=Q(appointments__status="completed"),
+                    distinct=True,
+                ),
+                total_reviews=Count(
+                    "appointments__review",
                     distinct=True,
                 ),
             )
