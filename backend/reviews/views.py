@@ -118,7 +118,7 @@ class ReviewListCreateView(generics.ListCreateAPIView):
     filterset_class = ReviewFilter
 
     def get_queryset(self):
-        return Review.objects.all()
+        return Review.objects.all().order_by("-created_at")
 
     def get_permissions(self) -> list:
         if self.request.method == "POST":
