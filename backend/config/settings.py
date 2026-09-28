@@ -46,6 +46,7 @@ else:
 
 if APP_ENV == "development":
     ALLOWED_HOSTS = [
+        "beautyaiservice.polandcentral.cloudapp.azure.com",
         "127.0.0.1",
         "localhost",
         "web",
