@@ -17,14 +17,13 @@ from pathlib import Path
 from celery.schedules import crontab
 from dotenv import load_dotenv
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 
 APP_ENV = os.environ.get("APP_ENV", "production")
-
+APP_ENV = "development"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -146,7 +145,11 @@ if DB_ENGINE in ("sqlite", "django.db.backends.sqlite3"):
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-elif DB_ENGINE in ("postgres", "django.contrib.gis.db.backends.postgis", "django.db.backends.postgresql"):
+elif DB_ENGINE in (
+    "postgres",
+    "django.contrib.gis.db.backends.postgis",
+    "django.db.backends.postgresql",
+):
     DATABASES = {
         "default": {
             "ENGINE": "django.contrib.gis.db.backends.postgis",
