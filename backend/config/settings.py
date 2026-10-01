@@ -100,8 +100,8 @@ INSTALLED_APPS = [
     "referral_events",
     "corsheaders",
     "locations",
-    "search",
     "django.contrib.gis",
+    "search",
 ]
 
 MIDDLEWARE = [
