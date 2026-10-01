@@ -23,6 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 APP_ENV = os.environ.get("APP_ENV", "production")
+DOMEN = os.environ.get("DOMEN", "beautyaiserviceua.polandcentral.cloudapp.azure.com")
 APP_ENV = "development"
 
 # Quick-start development settings - unsuitable for production
@@ -46,7 +47,7 @@ else:
 
 if APP_ENV == "development":
     ALLOWED_HOSTS = [
-        "beautyaiservice.polandcentral.cloudapp.azure.com",
+        f"{DOMEN}",
         "127.0.0.1",
         "localhost",
         "web",
@@ -55,7 +56,7 @@ if APP_ENV == "development":
     ]
 elif APP_ENV == "production":
     ALLOWED_HOSTS = [
-        "beautyaiservice.polandcentral.cloudapp.azure.com",
+        f"{DOMEN}",
         "127.0.0.1",
         "localhost",
         "web",
@@ -66,14 +67,14 @@ else:
     raise ValueError(f"Unknown APP_ENV: {APP_ENV}")
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://beautyaiservice.polandcentral.cloudapp.azure.com",
+    f"https://{DOMEN}",
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5500",
     "http://127.0.0.1:5500",
     "https://extymandriy.github.io",
-    "http://beautyaiservice.polandcentral.cloudapp.azure.com",
-    "https://beautyaiservice.polandcentral.cloudapp.azure.com",
+    f"http://{DOMEN}",
+    f"https://{DOMEN}",
 ]
 
 

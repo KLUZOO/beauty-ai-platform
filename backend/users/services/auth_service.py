@@ -21,7 +21,9 @@ class UserRegistrationService:
         )
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        verification_url = f"http://beautyaiservice.polandcentral.cloudapp.azure.com:5173/verify-email?token={token}&id={uid}"
+        verification_url = (
+            f"http://{settings.DOMEN}:5173/verify-email?token={token}&id={uid}"
+        )
 
         EmailService.send_email(
             recipient=user.email,
