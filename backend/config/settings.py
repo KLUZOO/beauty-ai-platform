@@ -77,7 +77,7 @@ CORS_ALLOWED_ORIGINS = [
     f"https://{DOMEN}",
 ]
 
-
+# Doomchik
 # Application definition
 
 INSTALLED_APPS = [
